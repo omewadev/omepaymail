@@ -4,45 +4,43 @@ service cloud.firestore {
 
     /**
      * PayMailHook Security Rules
-     * 
-     * Core Philosophy: This ruleset enforces a strict user-ownership model where all configuration 
-     * data is private and accessible only by the authenticated user who owns the data tree.
-     * 
-     * Data Structure: All data is organized hierarchically under a user's unique ID:
-     * /users/{userId}/clientApplications/{applicationId}/...
-     * 
-     * Key Security Decisions:
-     * 1. Path-Based Ownership: The 'userId' wildcard in the document path is the primary 
-     *    source of truth for authorization.
-     * 2. Denormalization for Authorization: While parent ownership is established by the path, 
-     *    sub-documents (Payment and Gmail configs) include a denormalized 'clientApplicationId' 
-     *    to ensure relational integrity during creation and updates without needing cross-document lookups.
-     * 3. Prototyping Flexibility: Rules enforce WHO can access data and basic relational links, 
-     *    but do not restrict the specific schema or data types of the content fields, allowing 
-     *    for rapid iteration of the application features.
-     * 4. Private by Default: No public read or write access is permitted. All operations 
-     *    require a valid Firebase Auth session.
+     *
+     * CORE PHILOSOPHY:
+     * This ruleset implements a strict user-ownership model using a hierarchical data structure.
+     * Every configuration entity is nested under a specific user's document path, ensuring 
+     * that data is naturally isolated and authorized based on the authenticated user's ID.
+     *
+     * DATA STRUCTURE:
+     * - /users/{userId}: The root document for a user.
+     * - /users/{userId}/paymentGatewayConfigurations/{id}: Private payment provider settings.
+     * - /users/{userId}/gmailListenerConfigurations/{id}: Private Gmail monitoring settings.
+     * - /users/{userId}/webhookConfigurations/{id}: Private outbound notification settings.
+     *
+     * KEY SECURITY DECISIONS:
+     * - Authorization Independence: Ownership is determined by the document path ({userId}), 
+     *   allowing for high-performance rules that do not require additional database lookups.
+     * - Relational Integrity: On creation, we enforce that the 'id' field within the 
+     *   document matches the Firestore document ID to ensure data consistency.
+     * - Prototyping Flexibility: While access is strictly controlled by ownership, 
+     *   the specific shape and types of non-relational data fields are not enforced 
+     *   to allow for rapid development iterations.
+     * - Destructive Guardrails: All update and delete operations require the 
+     *   resource to exist and the user to be the verified owner.
      */
 
     // --- Helper Functions ---
 
-    /**
-     * @description Checks if a user is authenticated with Firebase.
-     */
+    /** Checks if the request is from an authenticated user. */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * @description Checks if the authenticated user's UID matches the provided userId.
-     */
+    /** Checks if the authenticated user's UID matches the provided userId. */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /**
-     * @description Validates ownership and ensures the document exists for updates/deletes.
-     */
+    /** Checks if the user is the owner and the document already exists. */
     function isExistingOwner(userId) {
       return isOwner(userId) && resource != null;
     }
@@ -50,51 +48,65 @@ service cloud.firestore {
     // --- Collection Rules ---
 
     /**
-     * @description Rules for ClientApplication entities. Owners can manage their own applications.
-     * @path /users/{userId}/clientApplications/{applicationId}
-     * @allow (create) User 'user_123' creates a doc at /users/user_123/clientApplications/app_abc where data.id == 'app_abc'.
-     * @deny (list) User 'user_456' attempts to list documents under /users/user_123/clientApplications/.
-     * @principle Enforces strict path-based ownership and ensures document ID consistency.
+     * @description Rules for the root user document.
+     * @path /users/{userId}
+     * @allow (get, create) Authenticated user accessing/creating their own document.
+     * @deny (list) Listing users is globally forbidden for privacy.
+     * @principle Ownership and path-based authorization.
      */
-    match /users/{userId}/clientApplications/{applicationId} {
-      allow get, list: if isOwner(userId);
-      allow create: if isOwner(userId) && request.resource.data.id == applicationId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false; 
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
       allow delete: if isExistingOwner(userId);
 
       /**
-       * @description Rules for PaymentGatewayConfiguration entities.
-       * @path /users/{userId}/clientApplications/{applicationId}/paymentGatewayConfigurations/{configId}
-       * @allow (update) Owner updates a config and ensures 'clientApplicationId' remains immutable.
-       * @deny (create) User tries to save a config where 'clientApplicationId' does not match the path's 'applicationId'.
-       * @principle Uses denormalized parent IDs to maintain relational integrity without extra lookups.
+       * @description Stores individual payment gateway configurations (e.g., Stripe, PayPal).
+       * @path /users/{userId}/paymentGatewayConfigurations/{configId}
+       * @allow (create) User 'abc' creating a config at /users/abc/paymentGatewayConfigurations/conf123.
+       * @deny (get) User 'xyz' attempting to read user 'abc's payment configuration.
+       * @principle Authorization Independence via path-based ownership.
        */
       match /paymentGatewayConfigurations/{configId} {
         allow get, list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.clientApplicationId == applicationId;
-        allow update: if isExistingOwner(userId) && request.resource.data.clientApplicationId == resource.data.clientApplicationId;
+        allow create: if isOwner(userId) && request.resource.data.id == configId;
+        allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
         allow delete: if isExistingOwner(userId);
       }
 
       /**
-       * @description Rules for GmailListenerConfiguration entities.
-       * @path /users/{userId}/clientApplications/{applicationId}/gmailListenerConfigurations/{configId}
-       * @allow (get) Owner retrieves a specific Gmail listener configuration.
-       * @deny (delete) A user who does not own the parent path attempts to delete a configuration.
-       * @principle Inherits security posture from the parent user/application hierarchy.
+       * @description Stores configurations for monitoring Gmail accounts for payment emails.
+       * @path /users/{userId}/gmailListenerConfigurations/{configId}
+       * @allow (list) User 'abc' fetching all their own Gmail listeners.
+       * @deny (update) User 'abc' trying to change the 'id' of an existing listener config.
+       * @principle Relational integrity and immutability of primary keys.
        */
       match /gmailListenerConfigurations/{configId} {
         allow get, list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.clientApplicationId == applicationId;
-        allow update: if isExistingOwner(userId) && request.resource.data.clientApplicationId == resource.data.clientApplicationId;
+        allow create: if isOwner(userId) && request.resource.data.id == configId;
+        allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+        allow delete: if isExistingOwner(userId);
+      }
+
+      /**
+       * @description Stores webhook settings for notifying external systems of events.
+       * @path /users/{userId}/webhookConfigurations/{configId}
+       * @allow (delete) User 'abc' deleting their own webhook configuration.
+       * @deny (create) User 'abc' trying to create a webhook under user 'xyz's path.
+       * @principle Structural segregation of user-specific private data.
+       */
+      match /webhookConfigurations/{configId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.id == configId;
+        allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
         allow delete: if isExistingOwner(userId);
       }
     }
 
-    // Explicitly deny access to the root users collection to prevent user enumeration
-    match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list, create, update, delete: if false;
+    // Default deny for any unmatched paths
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
