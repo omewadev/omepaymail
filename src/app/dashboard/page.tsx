@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, ArrowRight } from "lucide-react";
+import { AlertTriangle, ArrowRight, Mail, Cpu, Globe, Zap, CheckCircle2 } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
 import Link from "next/link";
 import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
@@ -41,6 +41,7 @@ export default function OverviewPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Cảnh báo hạn mức */}
       {isWarning && (
         <div className="bg-amber-50 border border-amber-200 p-6 rounded-xl flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4 text-amber-800">
@@ -53,17 +54,77 @@ export default function OverviewPage() {
             </div>
           </div>
           <Button asChild size="lg" className="bg-amber-600 hover:bg-amber-700 text-white shadow-lg">
-            <Link href="/dashboard/settings" className="flex items-center gap-2 font-bold">
+            <Link href="/dashboard/billing" className="flex items-center gap-2 font-bold">
               Gia hạn & Nâng cấp ngay <ArrowRight className="w-4 h-4" />
             </Link>
           </Button>
         </div>
       )}
 
+      {/* Sơ đồ luồng hoạt động (Visualizing how they work together) */}
+      <Card className="border-none shadow-sm bg-slate-50 overflow-hidden">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Zap className="w-5 h-5 text-accent" />
+            Quy trình tự động hóa của bạn
+          </CardTitle>
+          <CardDescription>Cách PayMailHook kết nối Ngân hàng với Website của bạn</CardDescription>
+        </CardHeader>
+        <CardContent className="pt-4">
+          <div className="grid grid-cols-1 md:grid-cols-7 gap-4 items-center">
+            {/* Bước 1: Ngân hàng */}
+            <div className="md:col-span-1 flex flex-col items-center text-center space-y-2">
+              <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center border border-slate-200">
+                <Globe className="w-6 h-6 text-blue-500" />
+              </div>
+              <span className="text-[10px] font-bold uppercase text-slate-500">Ngân hàng</span>
+            </div>
+
+            <div className="hidden md:flex md:col-span-1 justify-center">
+              <ArrowRight className="text-slate-300" />
+            </div>
+
+            {/* Bước 2: Gmail Hook */}
+            <div className="md:col-span-1 flex flex-col items-center text-center space-y-2">
+              <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center border border-slate-200">
+                <Mail className="w-6 h-6 text-red-500" />
+              </div>
+              <span className="text-[10px] font-bold uppercase text-slate-500">Gmail Hook</span>
+            </div>
+
+            <div className="hidden md:flex md:col-span-1 justify-center">
+              <ArrowRight className="text-slate-300" />
+            </div>
+
+            {/* Bước 3: AI Extract */}
+            <div className="md:col-span-1 flex flex-col items-center text-center space-y-2 relative">
+              <div className="w-16 h-16 rounded-2xl bg-accent text-white shadow-lg flex items-center justify-center animate-pulse">
+                <Cpu className="w-8 h-8" />
+              </div>
+              <span className="text-[10px] font-bold uppercase text-accent">AI (TTxxxxxx)</span>
+              <Badge className="absolute -top-2 -right-2 bg-green-500 text-[8px]">Real-time</Badge>
+            </div>
+
+            <div className="hidden md:flex md:col-span-1 justify-center">
+              <ArrowRight className="text-slate-300" />
+            </div>
+
+            {/* Bước 4: Website Merchant */}
+            <div className="md:col-span-1 flex flex-col items-center text-center space-y-2">
+              <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center border border-green-200">
+                <CheckCircle2 className="w-6 h-6 text-green-500" />
+              </div>
+              <span className="text-[10px] font-bold uppercase text-slate-500">Website Bạn</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Chỉ số chính */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="border-none shadow-md bg-primary text-white">
           <CardHeader className="pb-2">
-            <CardDescription className="text-white/70 text-xs">Gói cước</CardDescription>
+            <CardDescription className="text-white/70 text-xs">Gói cước hiện tại</CardDescription>
             <CardTitle className="text-2xl font-bold uppercase">{profile?.planName || "Free"}</CardTitle>
           </CardHeader>
           <CardContent>
@@ -123,17 +184,21 @@ export default function OverviewPage() {
 
         <Card className="lg:col-span-3 border-none shadow-md">
           <CardHeader>
-            <CardTitle className="text-lg">Hành động nhanh</CardTitle>
+            <CardTitle className="text-lg">Thông tin tài khoản</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="p-4 rounded-xl bg-secondary/30 space-y-3 border">
               <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Email:</span>
+                <span className="text-sm font-medium">Email đăng ký:</span>
                 <span className="text-xs font-mono">{user?.email}</span>
               </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium">UID hệ thống:</span>
+                <span className="text-xs font-mono text-muted-foreground">{user?.uid?.substring(0, 8)}...</span>
+              </div>
             </div>
-            <Button asChild className="w-full bg-accent hover:bg-accent/90">
-              <Link href="/dashboard/settings">Nâng cấp tài khoản</Link>
+            <Button asChild className="w-full bg-accent hover:bg-accent/90 shadow-md">
+              <Link href="/dashboard/billing">Nâng cấp tài khoản ngay</Link>
             </Button>
           </CardContent>
         </Card>
