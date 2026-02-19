@@ -10,6 +10,7 @@
         "webhookUrl": { "type": "string", "format": "uri", "description": "The URL to send webhook notifications to." },
         "secretKey": { "type": "string", "description": "A secret key used to sign webhook payloads." },
         "gmailConnected": { "type": "boolean", "description": "Whether the user has connected their Gmail account." },
+        "lastHistoryId": { "type": "string", "description": "Used to track the last processed email to avoid duplicates." },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "webhookUrl"]
@@ -22,7 +23,9 @@
         "userId": { "type": "string" },
         "amount": { "type": "number" },
         "referenceCode": { "type": "string" },
+        "senderName": { "type": "string" },
         "status": { "type": "string", "enum": ["success", "failed", "pending"] },
+        "webhookResponse": { "type": "string", "description": "Response received from the WordPress site." },
         "timestamp": { "type": "string", "format": "date-time" }
       }
     }
