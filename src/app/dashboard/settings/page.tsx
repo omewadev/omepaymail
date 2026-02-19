@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Save, Shield, Copy, FileCode } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase";
-import { collection, query, limit } from "firebase/firestore";
+import { collection, query, limit, doc } from "firebase/firestore";
 
 export default function SettingsPage() {
   const { user } = useUser();
@@ -30,7 +30,6 @@ export default function SettingsPage() {
       setWebhookUrl(webhooks[0].targetUrl || "");
       setSecretKey(webhooks[0].secretToken || "");
     } else if (user?.uid && !isLoading && (!webhooks || webhooks.length === 0)) {
-      // Generate a default secret key if none exists
       setSecretKey(`pmh_live_${Math.random().toString(36).substring(7)}`);
     }
   }, [webhooks, user?.uid, isLoading]);
@@ -39,9 +38,6 @@ export default function SettingsPage() {
     if (!firestore || !user?.uid) return;
 
     if (webhooks && webhooks.length > 0) {
-      const docRef = query(collection(firestore, "users", user.uid, "webhookConfigurations")).type === 'collection' ? null : null; // simplified
-      // Use direct doc reference instead
-      const { doc } = require("firebase/firestore");
       const ref = doc(firestore, "users", user.uid, "webhookConfigurations", webhooks[0].id);
       updateDocumentNonBlocking(ref, {
         targetUrl: webhookUrl,
