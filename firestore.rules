@@ -1,0 +1,100 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * PayMailHook Security Rules
+     * 
+     * Core Philosophy: This ruleset enforces a strict user-ownership model where all configuration 
+     * data is private and accessible only by the authenticated user who owns the data tree.
+     * 
+     * Data Structure: All data is organized hierarchically under a user's unique ID:
+     * /users/{userId}/clientApplications/{applicationId}/...
+     * 
+     * Key Security Decisions:
+     * 1. Path-Based Ownership: The 'userId' wildcard in the document path is the primary 
+     *    source of truth for authorization.
+     * 2. Denormalization for Authorization: While parent ownership is established by the path, 
+     *    sub-documents (Payment and Gmail configs) include a denormalized 'clientApplicationId' 
+     *    to ensure relational integrity during creation and updates without needing cross-document lookups.
+     * 3. Prototyping Flexibility: Rules enforce WHO can access data and basic relational links, 
+     *    but do not restrict the specific schema or data types of the content fields, allowing 
+     *    for rapid iteration of the application features.
+     * 4. Private by Default: No public read or write access is permitted. All operations 
+     *    require a valid Firebase Auth session.
+     */
+
+    // --- Helper Functions ---
+
+    /**
+     * @description Checks if a user is authenticated with Firebase.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * @description Checks if the authenticated user's UID matches the provided userId.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * @description Validates ownership and ensures the document exists for updates/deletes.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    // --- Collection Rules ---
+
+    /**
+     * @description Rules for ClientApplication entities. Owners can manage their own applications.
+     * @path /users/{userId}/clientApplications/{applicationId}
+     * @allow (create) User 'user_123' creates a doc at /users/user_123/clientApplications/app_abc where data.id == 'app_abc'.
+     * @deny (list) User 'user_456' attempts to list documents under /users/user_123/clientApplications/.
+     * @principle Enforces strict path-based ownership and ensures document ID consistency.
+     */
+    match /users/{userId}/clientApplications/{applicationId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.id == applicationId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description Rules for PaymentGatewayConfiguration entities.
+       * @path /users/{userId}/clientApplications/{applicationId}/paymentGatewayConfigurations/{configId}
+       * @allow (update) Owner updates a config and ensures 'clientApplicationId' remains immutable.
+       * @deny (create) User tries to save a config where 'clientApplicationId' does not match the path's 'applicationId'.
+       * @principle Uses denormalized parent IDs to maintain relational integrity without extra lookups.
+       */
+      match /paymentGatewayConfigurations/{configId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.clientApplicationId == applicationId;
+        allow update: if isExistingOwner(userId) && request.resource.data.clientApplicationId == resource.data.clientApplicationId;
+        allow delete: if isExistingOwner(userId);
+      }
+
+      /**
+       * @description Rules for GmailListenerConfiguration entities.
+       * @path /users/{userId}/clientApplications/{applicationId}/gmailListenerConfigurations/{configId}
+       * @allow (get) Owner retrieves a specific Gmail listener configuration.
+       * @deny (delete) A user who does not own the parent path attempts to delete a configuration.
+       * @principle Inherits security posture from the parent user/application hierarchy.
+       */
+      match /gmailListenerConfigurations/{configId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.clientApplicationId == applicationId;
+        allow update: if isExistingOwner(userId) && request.resource.data.clientApplicationId == resource.data.clientApplicationId;
+        allow delete: if isExistingOwner(userId);
+      }
+    }
+
+    // Explicitly deny access to the root users collection to prevent user enumeration
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list, create, update, delete: if false;
+    }
+  }
+}

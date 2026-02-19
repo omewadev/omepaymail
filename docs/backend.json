@@ -1,63 +1,245 @@
-
 {
   "entities": {
-    "UserAccount": {
-      "title": "User Account & Subscription",
-      "description": "Quản lý thông tin tài khoản, hạn mức và gói cước của người dùng.",
+    "ClientApplication": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ClientApplication",
       "type": "object",
+      "description": "Represents a client website or application that integrates with PayMailHook for payment processing and webhook notifications.",
       "properties": {
-        "userId": { "type": "string" },
-        "email": { "type": "string" },
-        "role": { "type": "string", "enum": ["user", "admin"] },
-        "planName": { "type": "string", "enum": ["Free", "Pro", "Enterprise"] },
-        "transactionLimit": { "type": "number", "description": "Hạn mức giao dịch tối đa trong tháng." },
-        "transactionUsed": { "type": "number", "description": "Số giao dịch đã thực hiện trong tháng." },
-        "status": { "type": "string", "enum": ["active", "suspended", "warning"] },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ClientApplication entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The human-readable name of the client application (e.g., 'My E-commerce Store')."
+        },
+        "webhookUrl": {
+          "type": "string",
+          "description": "The URL endpoint where PayMailHook will send payment confirmation webhooks to the client application.",
+          "format": "uri"
+        },
+        "webhookSecret": {
+          "type": "string",
+          "description": "A shared secret used to sign and verify webhook payloads, ensuring authenticity and integrity of notifications sent to the client application."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the client application configuration was initially created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the client application configuration was last updated.",
+          "format": "date-time"
+        }
       },
-      "required": ["userId", "email", "transactionLimit"]
+      "required": [
+        "id",
+        "name",
+        "webhookUrl",
+        "webhookSecret",
+        "createdAt",
+        "updatedAt"
+      ]
     },
-    "UserConfig": {
-      "title": "User Configuration",
-      "description": "Cấu hình kỹ thuật của người dùng.",
+    "PaymentGatewayConfiguration": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PaymentGatewayConfiguration",
       "type": "object",
+      "description": "Stores the specific settings and credentials required to integrate with a particular payment gateway for a client application.",
       "properties": {
-        "userId": { "type": "string" },
-        "webhookUrl": { "type": "string", "format": "uri" },
-        "secretKey": { "type": "string" },
-        "gmailConnected": { "type": "boolean" },
-        "updatedAt": { "type": "string", "format": "date-time" }
-      }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the PaymentGatewayConfiguration entity."
+        },
+        "clientApplicationId": {
+          "type": "string",
+          "description": "Reference to the ClientApplication this payment gateway configuration belongs to. (Relationship: ClientApplication 1:N PaymentGatewayConfiguration)"
+        },
+        "gatewayType": {
+          "type": "string",
+          "description": "The type or name of the payment gateway (e.g., 'Stripe', 'PayPal', 'BankTransfer')."
+        },
+        "merchantId": {
+          "type": "string",
+          "description": "The merchant ID or account identifier provided by the payment gateway for this specific client."
+        },
+        "apiKey": {
+          "type": "string",
+          "description": "The API key used for authenticating with the payment gateway. (Sensitive information - should be stored encrypted in production)."
+        },
+        "apiSecret": {
+          "type": "string",
+          "description": "The API secret used for authenticating with the payment gateway. (Sensitive information - should be stored encrypted in production)."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Indicates whether this payment gateway configuration is currently active and can be used to process payments."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when this payment gateway configuration was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when this payment gateway configuration was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "clientApplicationId",
+        "gatewayType",
+        "merchantId",
+        "apiKey",
+        "isActive",
+        "createdAt",
+        "updatedAt"
+      ]
     },
-    "TransactionLog": {
-      "title": "Transaction Log",
-      "description": "Nhật ký giao dịch chi tiết.",
+    "GmailListenerConfiguration": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "GmailListenerConfiguration",
       "type": "object",
+      "description": "Defines the settings for monitoring a specific Gmail account for incoming payment confirmation emails.",
       "properties": {
-        "userId": { "type": "string" },
-        "amount": { "type": "number" },
-        "referenceCode": { "type": "string" },
-        "senderName": { "type": "string" },
-        "status": { "type": "string", "enum": ["success", "failed", "limit_exceeded"] },
-        "timestamp": { "type": "string", "format": "date-time" }
-      }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the GmailListenerConfiguration entity."
+        },
+        "clientApplicationId": {
+          "type": "string",
+          "description": "Reference to the ClientApplication this Gmail listener configuration belongs to. (Relationship: ClientApplication 1:N GmailListenerConfiguration)"
+        },
+        "emailAddress": {
+          "type": "string",
+          "description": "The Gmail address to be monitored for payment confirmation emails.",
+          "format": "email"
+        },
+        "bankKeywords": {
+          "type": "array",
+          "description": "A list of keywords or phrases to search for within email subjects or bodies to identify payment confirmation emails (e.g., 'đã nhận tiền', 'payment received').",
+          "items": {
+            "type": "string"
+          }
+        },
+        "senderWhitelist": {
+          "type": "array",
+          "description": "A list of trusted sender email addresses (e.g., specific bank notification emails) from which to accept payment confirmations.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Indicates whether this Gmail listener is currently active and monitoring the specified email address."
+        },
+        "lastSuccessfulSync": {
+          "type": "string",
+          "description": "Timestamp of the last successful synchronization or email check performed by this listener.",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when this Gmail listener configuration was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when this Gmail listener configuration was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "clientApplicationId",
+        "emailAddress",
+        "bankKeywords",
+        "isActive",
+        "createdAt",
+        "updatedAt"
+      ]
     }
   },
   "auth": {
-    "providers": ["google.com"]
+    "providers": [
+      "password",
+      "anonymous"
+    ]
   },
   "firestore": {
-    "/accounts/{userId}": {
-      "schema": "UserAccount",
-      "description": "Thông tin quản trị và hạn mức của người dùng."
-    },
-    "/userConfigs/{userId}": {
-      "schema": "UserConfig",
-      "description": "Cấu hình Webhook và Gmail."
-    },
-    "/logs/{logId}": {
-      "schema": "TransactionLog",
-      "description": "Lịch sử giao dịch toàn hệ thống."
-    }
+    "structure": [
+      {
+        "path": "/users/{userId}/clientApplications/{applicationId}",
+        "definition": {
+          "entityName": "ClientApplication",
+          "schema": {
+            "$ref": "#/backend/entities/ClientApplication"
+          },
+          "description": "Represents a client website or application owned by a specific user. The 'userId' in the path indicates the owner. Access is restricted to the authenticated user matching 'userId'.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who owns this client application."
+            },
+            {
+              "name": "applicationId",
+              "description": "The unique identifier for the ClientApplication."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/clientApplications/{applicationId}/paymentGatewayConfigurations/{configId}",
+        "definition": {
+          "entityName": "PaymentGatewayConfiguration",
+          "schema": {
+            "$ref": "#/backend/entities/PaymentGatewayConfiguration"
+          },
+          "description": "Stores payment gateway settings for a specific client application. Access is controlled by the owning 'userId' and 'applicationId'. Includes denormalized 'clientApplicationId' for authorization independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who owns the parent client application."
+            },
+            {
+              "name": "applicationId",
+              "description": "The unique identifier for the parent ClientApplication."
+            },
+            {
+              "name": "configId",
+              "description": "The unique identifier for the PaymentGatewayConfiguration."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/clientApplications/{applicationId}/gmailListenerConfigurations/{configId}",
+        "definition": {
+          "entityName": "GmailListenerConfiguration",
+          "schema": {
+            "$ref": "#/backend/entities/GmailListenerConfiguration"
+          },
+          "description": "Defines settings for monitoring a Gmail account for payment confirmations for a specific client application. Access is controlled by the owning 'userId' and 'applicationId'. Includes denormalized 'clientApplicationId' for authorization independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who owns the parent client application."
+            },
+            {
+              "name": "applicationId",
+              "description": "The unique identifier for the parent ClientApplication."
+            },
+            {
+              "name": "configId",
+              "description": "The unique identifier for the GmailListenerConfiguration."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The recommended Firestore data structure for PayMailHook prioritizes strong user ownership, authorization independence, and simplified security rules by following a strictly hierarchical and denormalized pattern. \n\n1.  **User-Owned Client Applications:** The top-level access point for configurations is `/users/{userId}/clientApplications/{applicationId}`. This structure immediately ties each `ClientApplication` to a specific user, making ownership explicit through the `userId` wildcard in the path. Access to a `ClientApplication` document can be granted by checking `request.auth.uid == userId` directly in security rules, without needing to store an `ownerId` field within the `ClientApplication` document itself (though including one for clarity and potential future flexibility is often a good practice).\n\n2.  **Authorization Independence (CRITICAL):** For subcollections like `paymentGatewayConfigurations` and `gmailListenerConfigurations`, access depends on the parent `ClientApplication`. To achieve authorization independence and avoid `get()` calls in security rules (Mandate A), the `clientApplicationId` from the parent `ClientApplication` is denormalized and included as a required field within every `PaymentGatewayConfiguration` and `GmailListenerConfiguration` document. This allows security rules to verify `request.auth.uid == userId` and `resource.data.clientApplicationId == applicationId` directly against the path wildcards and the document's own data, enabling atomic operations and robust security without costly or complex hierarchical data lookups.\n\n3.  **Structural Segregation (Homogeneous Security Posture):** All documents within a given collection path (e.g., all documents in `/users/{userId}/clientApplications/{applicationId}/paymentGatewayConfigurations`) share the exact same security requirements, simplifying rule logic. There's no mixing of public/private or different access levels within the same collection.\n\n4.  **QAPs (Rules are not Filters):** This structure inherently supports secure `list` operations (Mandate B.4). For example, to list a user's client applications, a query to `firestore.collection('users').doc(request.auth.uid).collection('clientApplications')` will only return applications owned by the authenticated user. Similarly, listing configurations for a specific client application will be scoped correctly by the path, preventing unauthorized data leakage or over-fetching.\n\n5.  **Access Modeling:** The design leverages Path-Based Ownership and Hierarchical Paths for User-Owned Data, making the authorization intent clear and easy to debug. Wildcards like `{userId}`, `{applicationId}`, and `{configId}` are descriptive and consistent."
   }
 }
