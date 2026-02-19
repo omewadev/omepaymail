@@ -75,12 +75,13 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "WebhookConfiguration",
       "type": "object",
-      "description": "Cấu hình Webhook gửi về WordPress.",
+      "description": "Cấu hình Webhook gửi về Merchant.",
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
         "targetUrl": { "type": "string", "format": "uri" },
         "secretToken": { "type": "string" },
+        "referencePrefix": { "type": "string", "description": "Tiền tố mã đơn hàng (ví dụ: TT, CG, DH)." },
         "triggerEvent": { "type": "string" },
         "isEnabled": { "type": "boolean" },
         "retryAttempts": { "type": "number" },
@@ -88,7 +89,7 @@
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "name", "targetUrl", "isEnabled"]
+      "required": ["id", "name", "targetUrl", "isEnabled", "referencePrefix"]
     }
   },
   "auth": {
@@ -109,7 +110,7 @@
     },
     "/users/{userId}/webhookConfigurations/{id}": {
       "schema": { "$ref": "#/backend/entities/WebhookConfiguration" },
-      "description": "Cấu hình Webhook cá nhân gửi về WordPress."
+      "description": "Cấu hình Webhook cá nhân gửi về WordPress hoặc Custom Web."
     }
   }
 }

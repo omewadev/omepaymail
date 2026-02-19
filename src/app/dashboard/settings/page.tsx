@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -5,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Save, Shield, Copy, FileCode, Globe, Code2 } from "lucide-react";
+import { Save, Shield, Copy, FileCode, Globe, Code2, Hash } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase";
 import { collection, query, limit, doc } from "firebase/firestore";
@@ -17,6 +18,7 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const [webhookUrl, setWebhookUrl] = useState("");
   const [secretKey, setSecretKey] = useState("");
+  const [referencePrefix, setReferencePrefix] = useState("TT");
 
   const webhooksQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
@@ -29,6 +31,7 @@ export default function SettingsPage() {
     if (webhooks && webhooks.length > 0) {
       setWebhookUrl(webhooks[0].targetUrl || "");
       setSecretKey(webhooks[0].secretToken || "");
+      setReferencePrefix(webhooks[0].referencePrefix || "TT");
     } else if (user?.uid && !isLoading && (!webhooks || webhooks.length === 0)) {
       setSecretKey(`pmh_live_${Math.random().toString(36).substring(7)}`);
     }
@@ -37,19 +40,21 @@ export default function SettingsPage() {
   const handleSave = () => {
     if (!firestore || !user?.uid) return;
 
+    const data = {
+      targetUrl: webhookUrl,
+      secretToken: secretKey,
+      referencePrefix: referencePrefix.toUpperCase().trim(),
+      updatedAt: new Date().toISOString()
+    };
+
     if (webhooks && webhooks.length > 0) {
       const ref = doc(firestore, "users", user.uid, "webhookConfigurations", webhooks[0].id);
-      updateDocumentNonBlocking(ref, {
-        targetUrl: webhookUrl,
-        secretToken: secretKey,
-        updatedAt: new Date().toISOString()
-      });
+      updateDocumentNonBlocking(ref, data);
     } else {
       const colRef = collection(firestore, "users", user.uid, "webhookConfigurations");
       addDocumentNonBlocking(colRef, {
+        ...data,
         name: "Main Webhook",
-        targetUrl: webhookUrl,
-        secretToken: secretKey,
         isEnabled: true,
         createdAt: new Date().toISOString()
       });
@@ -57,7 +62,7 @@ export default function SettingsPage() {
 
     toast({
       title: "Đã lưu cấu hình",
-      description: "Hệ thống của bạn giờ đã có thể nhận dữ liệu từ PayMailHook.",
+      description: "Hệ thống của bạn giờ đã có thể nhận dữ liệu với tiền tố mã " + referencePrefix,
     });
   };
 
@@ -69,13 +74,13 @@ export default function SettingsPage() {
     });
   };
 
-  if (isLoading) return <div className="p-8">Đang tải cấu hình...</div>;
+  if (isLoading) return <div className="p-8 text-center">Đang tải cấu hình...</div>;
 
   return (
     <div className="max-w-4xl space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
-        <h2 className="text-3xl font-headline font-bold text-primary">Cài đặt kết nối Merchant</h2>
-        <p className="text-muted-foreground">Cấu hình cách PayMailHook giao tiếp với Website hoặc Ứng dụng của bạn.</p>
+        <h2 className="text-3xl font-headline font-bold text-primary">Cấu hình hệ thống Merchant</h2>
+        <p className="text-muted-foreground">Tùy chỉnh cách PayMailHook nhận dạng đơn hàng và gửi dữ liệu.</p>
       </div>
 
       <div className="grid gap-6">
@@ -83,13 +88,46 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="w-5 h-5 text-accent" />
-              Cấu hình Webhook Endpoint
+              Nhận dạng & Bảo mật
             </CardTitle>
             <CardDescription>
-              Nhập đường dẫn API (Webhook) trên hệ thống của bạn để chúng tôi gửi mã đối soát giao dịch về.
+              Thiết lập mã nhận diện đơn hàng để AI có thể trích xuất chính xác.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="ref-prefix" className="flex items-center gap-2">
+                  <Hash className="w-4 h-4" /> Tiền tố mã đơn hàng (Prefix)
+                </Label>
+                <Input 
+                  id="ref-prefix" 
+                  placeholder="Ví dụ: TT, CG, DH, BILL" 
+                  value={referencePrefix}
+                  onChange={(e) => setReferencePrefix(e.target.value)}
+                  className="font-bold uppercase"
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  AI sẽ tìm kiếm nội dung chuyển khoản bắt đầu bằng mã này (VD: <b>{referencePrefix}</b>123456).
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="secret-key">Secret Key (Xác thực)</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    id="secret-key" 
+                    readOnly 
+                    value={secretKey}
+                    className="bg-muted font-mono"
+                  />
+                  <Button variant="outline" size="icon" onClick={() => copyToClipboard(secretKey)}>
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="webhook-url">URL Webhook nhận dữ liệu (Endpoint)</Label>
               <Input 
@@ -99,27 +137,6 @@ export default function SettingsPage() {
                 onChange={(e) => setWebhookUrl(e.target.value)}
                 className="font-mono text-sm"
               />
-              <p className="text-xs text-muted-foreground italic">
-                Hệ thống sẽ gửi yêu cầu POST JSON kèm theo mã tham chiếu giao dịch.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="secret-key">Secret Key (Xác thực bảo mật)</Label>
-              <div className="flex gap-2">
-                <Input 
-                  id="secret-key" 
-                  readOnly 
-                  value={secretKey}
-                  className="bg-muted font-mono"
-                />
-                <Button variant="outline" size="icon" onClick={() => copyToClipboard(secretKey)}>
-                  <Copy className="w-4 h-4" />
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Sử dụng mã này để xác minh tính toàn vẹn của dữ liệu gửi từ PayMailHook.
-              </p>
             </div>
           </CardContent>
           <CardFooter className="border-t bg-muted/20 px-6 py-4 flex justify-end">
@@ -143,38 +160,28 @@ export default function SettingsPage() {
                   <Globe className="w-4 h-4" /> WordPress
                 </TabsTrigger>
                 <TabsTrigger value="custom" className="font-bold flex gap-2">
-                  <FileCode className="w-4 h-4" /> Website khác
+                  <FileCode className="w-4 h-4" /> Custom Web
                 </TabsTrigger>
               </TabsList>
               
               <TabsContent value="wordpress" className="space-y-4 text-sm">
-                <p>Để WordPress tự động duyệt đơn hàng, hãy làm theo các bước:</p>
-                <div className="flex gap-4">
-                  <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs shrink-0">1</div>
-                  <p>Mở file <code>docs/wordpress-integration-sample.php</code> trong bộ mã nguồn này.</p>
-                </div>
-                <div className="flex gap-4">
-                  <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs shrink-0">2</div>
-                  <p>Dán vào file <b>functions.php</b> của Theme hoặc dùng Plugin <b>Code Snippets</b>.</p>
-                </div>
-                <div className="flex gap-4">
-                  <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs shrink-0">3</div>
-                  <p>Thay thế <code>Secret Key</code> bằng mã bạn vừa sao chép ở trên.</p>
+                <p>Để WordPress tự động duyệt đơn hàng, hãy thay mã <code>TT</code> trong code bằng tiền tố của bạn:</p>
+                <div className="p-3 bg-slate-50 rounded border font-mono text-xs">
+                  $referenceCode = $params['referenceCode'] ?? ''; <br/>
+                  $order_id = str_replace('<b>{referencePrefix}</b>', '', $referenceCode);
                 </div>
               </TabsContent>
 
               <TabsContent value="custom" className="space-y-4 text-sm">
-                <p>Đối với Website tùy chỉnh, bạn cần viết một hàm đón yêu cầu <b>POST</b> với dữ liệu JSON:</p>
+                <p>Dữ liệu JSON mẫu mà website bạn sẽ nhận được:</p>
                 <div className="bg-slate-900 text-green-400 p-4 rounded-lg font-mono text-[11px] overflow-x-auto">
 {`{
   "amount": 500000,
-  "referenceCode": "TT123456",
-  "senderName": "NGUYEN VAN A",
+  "referenceCode": "${referencePrefix}123456",
   "secretKey": "${secretKey || 'YOUR_KEY'}",
   "timestamp": "2024-03-20T10:30:00Z"
 }`}
                 </div>
-                <p className="text-muted-foreground italic">Gợi ý: Kiểm tra mã "referenceCode" để biết đơn hàng nào cần được xác nhận thành công.</p>
               </TabsContent>
             </Tabs>
           </CardContent>

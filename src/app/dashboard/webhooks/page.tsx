@@ -1,23 +1,32 @@
+
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Webhook, Plus, Trash2, Send, ExternalLink, Shield, Info, Copy, Check, Terminal } from "lucide-react";
+import { Webhook, Plus, Trash2, Send, ExternalLink, Shield, Info, Copy, Terminal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
+import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, query, limit } from "firebase/firestore";
 
 export default function WebhooksPage() {
   const { toast } = useToast();
-  const [webhooks, setWebhooks] = useState([
-    { id: 1, name: "Merchant API Endpoint", url: "https://your-app.com/api/pay-callback", active: true, events: ["New Bank Transfer"] },
-  ]);
+  const { user } = useUser();
+  const firestore = useFirestore();
+
+  const webhooksQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return query(collection(firestore, "users", user.uid, "webhookConfigurations"), limit(1));
+  }, [firestore, user?.uid]);
+
+  const { data: webhooksData, isLoading } = useCollection(webhooksQuery);
+  const hook = webhooksData?.[0];
 
   const copyToClipboard = (text: string) => {
+    if (!text) return;
     navigator.clipboard.writeText(text);
     toast({
       title: "Đã sao chép",
@@ -25,49 +34,53 @@ export default function WebhooksPage() {
     });
   };
 
+  if (isLoading) return <div className="p-8 text-center">Đang tải danh sách Webhooks...</div>;
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-headline font-bold text-primary">Quản lý Webhooks</h2>
-          <p className="text-muted-foreground">Khai báo các Endpoint sẽ nhận dữ liệu đối soát tự động.</p>
+          <p className="text-muted-foreground">Cấu hình các điểm nhận dữ liệu (Endpoint) từ hệ thống AI.</p>
         </div>
         <Button className="bg-accent hover:bg-accent/90 font-bold h-12">
-          <Plus className="w-5 h-5 mr-2" /> Thêm Endpoint mới
+          <Plus className="w-5 h-5 mr-2" /> Thêm Endpoint
         </Button>
       </div>
 
       <Alert className="bg-primary/5 border-primary/20">
         <Terminal className="h-5 w-5 text-primary" />
-        <AlertTitle className="text-primary font-bold text-lg">Cơ chế hoạt động chung</AlertTitle>
+        <AlertTitle className="text-primary font-bold text-lg">Cơ chế phát hiện mã tham chiếu</AlertTitle>
         <AlertDescription className="text-base mt-2">
-          Khi AI phát hiện giao dịch, hệ thống sẽ gửi gói tin JSON chứa mã tham chiếu (ví dụ: <b>TT123456</b>) về Endpoint của bạn. Website của bạn cần xử lý yêu cầu này để tự động hóa quy trình bán hàng.
+          Hệ thống sẽ dựa vào <b>Tiền tố (Prefix)</b> bạn đã cài đặt trong phần Cài đặt (mặc định là <b>{hook?.referencePrefix || 'TT'}</b>) để trích xuất mã đơn hàng từ email ngân hàng và gửi về Endpoint dưới đây.
         </AlertDescription>
       </Alert>
 
       <div className="grid grid-cols-1 gap-8">
-        {webhooks.map((hook) => (
-          <Card key={hook.id} className="border-none shadow-lg overflow-hidden transition-all hover:shadow-xl">
+        {hook ? (
+          <Card className="border-none shadow-lg overflow-hidden transition-all hover:shadow-xl">
             <div className="h-2 bg-gradient-to-r from-primary to-accent" />
             <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-3">
                   <CardTitle className="text-xl font-bold">{hook.name}</CardTitle>
-                  <Badge className={hook.active ? "bg-green-500 hover:bg-green-600" : "bg-slate-400"}>
-                    {hook.active ? "Đang hoạt động" : "Tạm dừng"}
+                  <Badge className={hook.isEnabled ? "bg-green-500 hover:bg-green-600" : "bg-slate-400"}>
+                    {hook.isEnabled ? "Đang hoạt động" : "Tạm dừng"}
                   </Badge>
                 </div>
-                <div className="flex items-center gap-2 text-muted-foreground font-mono text-sm bg-muted/50 p-2 rounded-md border">
-                  <ExternalLink className="w-4 h-4" /> 
-                  <span className="truncate">{hook.url}</span>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto" onClick={() => copyToClipboard(hook.url)}>
+                <div className="flex items-center gap-2 text-muted-foreground font-mono text-sm bg-muted/50 p-2 rounded-md border max-w-md">
+                  <ExternalLink className="w-4 h-4 shrink-0" /> 
+                  <span className="truncate">{hook.targetUrl}</span>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto" onClick={() => copyToClipboard(hook.targetUrl)}>
                     <Copy className="w-3 h-3" />
                   </Button>
                 </div>
               </div>
               <div className="flex items-center gap-4">
-                <Label className="font-bold">Kích hoạt</Label>
-                <Switch checked={hook.active} />
+                <Badge variant="outline" className="font-bold border-accent text-accent">
+                  Prefix: {hook.referencePrefix}
+                </Badge>
+                <Switch checked={hook.isEnabled} />
               </div>
             </CardHeader>
             <CardContent className="pt-4">
@@ -76,27 +89,25 @@ export default function WebhooksPage() {
                   <h4 className="font-bold text-primary flex items-center gap-2">
                     <Shield className="w-4 h-4" /> Payload & Security
                   </h4>
-                  <p className="text-sm text-muted-foreground">Mọi yêu cầu đều được gửi qua HTTPS POST với định dạng JSON, đi kèm Secret Key để bảo mật hệ thống của bạn.</p>
+                  <p className="text-sm text-muted-foreground">Mọi yêu cầu đều được gửi qua HTTPS POST với định dạng JSON, đi kèm Secret Key để bảo mật.</p>
                   <div className="flex flex-wrap gap-2">
-                    {hook.events.map(event => (
-                      <Badge key={event} variant="outline" className="bg-accent/5 text-accent border-accent/20 font-bold px-3 py-1">
-                        {event}
-                      </Badge>
-                    ))}
+                    <Badge variant="outline" className="bg-accent/5 text-accent border-accent/20 font-bold px-3 py-1">
+                      New Bank Transfer
+                    </Badge>
                   </div>
                 </div>
                 
                 <div className="p-4 bg-slate-900 rounded-xl border border-slate-800 shadow-inner">
                   <div className="flex items-center justify-between mb-3">
-                    <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Dữ liệu JSON mẫu</p>
+                    <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Dữ liệu JSON mẫu (Prefix: {hook.referencePrefix})</p>
                     <Badge variant="outline" className="text-[9px] text-slate-400 border-slate-700">POST</Badge>
                   </div>
                   <pre className="text-[12px] font-mono text-green-400 overflow-x-auto leading-relaxed">
 {`{
   "amount": 500000,
-  "referenceCode": "TT123456",
+  "referenceCode": "${hook.referencePrefix}123456",
   "senderName": "NGUYEN VAN A",
-  "secretKey": "pmh_live_..."
+  "secretKey": "${hook.secretToken?.substring(0, 10)}..."
 }`}
                   </pre>
                 </div>
@@ -112,11 +123,16 @@ export default function WebhooksPage() {
                 </Button>
               </div>
               <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 font-bold">
-                <Trash2 className="w-4 h-4 mr-2" /> Xóa Endpoint
+                <Trash2 className="w-4 h-4 mr-2" /> Xóa
               </Button>
             </CardFooter>
           </Card>
-        ))}
+        ) : (
+          <div className="text-center py-20 bg-white rounded-xl border-2 border-dashed">
+            <p className="text-muted-foreground">Chưa có Endpoint nào được cấu hình.</p>
+            <Button className="mt-4 bg-accent">Thiết lập ngay</Button>
+          </div>
+        )}
       </div>
     </div>
   );
