@@ -5,6 +5,7 @@ import { SidebarProvider, SidebarInset, Sidebar, SidebarContent, SidebarHeader, 
 import { ShieldCheck, Users, BarChart3, Settings, LogOut, Globe, Bell } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -68,7 +69,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <ShieldCheck className="w-5 h-5 text-accent" />
             Quản trị viên Hệ thống
           </h1>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
+             <LanguageSwitcher />
              <Badge variant="outline" className="text-accent border-accent">Super Admin</Badge>
           </div>
         </header>

@@ -1,6 +1,8 @@
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck, Mail, Zap, ArrowRight, Globe } from "lucide-react";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export default function Home() {
   return (
@@ -12,6 +14,7 @@ export default function Home() {
           <span className="font-headline font-bold text-xl text-primary">PayMailHook</span>
         </div>
         <div className="flex items-center gap-6">
+          <LanguageSwitcher />
           <Link href="/dashboard" className="text-sm font-medium hover:text-accent transition-colors">Đăng nhập</Link>
           <Button asChild className="bg-primary text-white">
             <Link href="/dashboard">Bắt đầu ngay</Link>

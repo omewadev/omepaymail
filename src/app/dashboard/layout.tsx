@@ -2,6 +2,7 @@
 import { SidebarProvider, SidebarInset, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarGroup, SidebarGroupLabel, SidebarFooter } from "@/components/ui/sidebar";
 import { LayoutDashboard, Webhook, Settings, History, Mail, LogOut, CreditCard } from "lucide-react";
 import Link from "next/link";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -83,6 +84,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <header className="h-16 border-b border-border bg-white flex items-center justify-between px-8 sticky top-0 z-10">
           <h1 className="text-xl font-headline font-bold text-primary">Bảng điều khiển</h1>
           <div className="flex items-center gap-4">
+            <LanguageSwitcher />
             <div className="text-right mr-2 hidden sm:block">
               <p className="text-sm font-bold">Người dùng App</p>
               <p className="text-xs text-muted-foreground">Tài khoản Premium</p>
