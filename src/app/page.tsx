@@ -1,7 +1,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, Mail, Zap, ArrowRight, Globe } from "lucide-react";
+import { ShieldCheck, Mail, Zap, ArrowRight, Globe, FileCode } from "lucide-react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export default function Home() {
@@ -36,8 +36,10 @@ export default function Home() {
               Mở Dashboard <ArrowRight className="ml-2 w-5 h-5" />
             </Link>
           </Button>
-          <Button variant="outline" size="lg" className="px-8 h-14 text-lg border-primary text-primary hover:bg-primary/5">
-            Xem Tài liệu tích hợp
+          <Button variant="outline" size="lg" className="px-8 h-14 text-lg border-primary text-primary hover:bg-primary/5" asChild>
+            <Link href="/docs">
+              <FileCode className="mr-2 w-5 h-5" /> Xem Tài liệu tích hợp
+            </Link>
           </Button>
         </div>
       </section>
