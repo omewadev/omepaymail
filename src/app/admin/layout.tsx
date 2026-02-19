@@ -2,7 +2,7 @@
 "use client";
 
 import { SidebarProvider, SidebarInset, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarGroup, SidebarGroupLabel, SidebarFooter } from "@/components/ui/sidebar";
-import { ShieldCheck, Users, BarChart3, Settings, LogOut, Globe, AlertOctagon, Bell } from "lucide-react";
+import { ShieldCheck, Users, BarChart3, Settings, LogOut, Globe, Bell } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 
@@ -50,12 +50,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter className="border-t border-slate-800 p-4">
-           <SidebarMenuButton asChild>
-            <Link href="/dashboard" className="flex items-center gap-3 px-4 py-2 text-slate-400 hover:text-white">
-              <Globe className="w-5 h-5" />
-              <span>Về User App</span>
-            </Link>
-          </SidebarMenuButton>
+           <SidebarMenu>
+             <SidebarMenuItem>
+               <SidebarMenuButton asChild>
+                <Link href="/dashboard" className="flex items-center gap-3 px-4 py-2 text-slate-400 hover:text-white">
+                  <Globe className="w-5 h-5" />
+                  <span>Về User App</span>
+                </Link>
+              </SidebarMenuButton>
+             </SidebarMenuItem>
+           </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
       <SidebarInset className="bg-slate-50">

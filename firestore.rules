@@ -1,110 +1,33 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * PayMailHook Security Rules
-     *
-     * CORE PHILOSOPHY:
-     * This ruleset implements a strict user-ownership model using a hierarchical data structure.
-     * Every configuration entity is nested under a specific user's document path, ensuring 
-     * that data is naturally isolated and authorized based on the authenticated user's ID.
-     *
-     * DATA STRUCTURE:
-     * - /users/{userId}: The root document for a user.
-     * - /users/{userId}/paymentGatewayConfigurations/{id}: Private payment provider settings.
-     * - /users/{userId}/gmailListenerConfigurations/{id}: Private Gmail monitoring settings.
-     * - /users/{userId}/webhookConfigurations/{id}: Private outbound notification settings.
-     *
-     * KEY SECURITY DECISIONS:
-     * - Authorization Independence: Ownership is determined by the document path ({userId}), 
-     *   allowing for high-performance rules that do not require additional database lookups.
-     * - Relational Integrity: On creation, we enforce that the 'id' field within the 
-     *   document matches the Firestore document ID to ensure data consistency.
-     * - Prototyping Flexibility: While access is strictly controlled by ownership, 
-     *   the specific shape and types of non-relational data fields are not enforced 
-     *   to allow for rapid development iterations.
-     * - Destructive Guardrails: All update and delete operations require the 
-     *   resource to exist and the user to be the verified owner.
-     */
-
-    // --- Helper Functions ---
-
-    /** Checks if the request is from an authenticated user. */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /** Checks if the authenticated user's UID matches the provided userId. */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /** Checks if the user is the owner and the document already exists. */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
-    }
-
-    // --- Collection Rules ---
-
-    /**
-     * @description Rules for the root user document.
-     * @path /users/{userId}
-     * @allow (get, create) Authenticated user accessing/creating their own document.
-     * @deny (list) Listing users is globally forbidden for privacy.
-     * @principle Ownership and path-based authorization.
-     */
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if false; 
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      allow get, create, update: if isOwner(userId);
+      allow list: if false; // Chỉ Admin mới được list, nhưng ở đây dùng quy tắc đơn giản cho MVP
 
-      /**
-       * @description Stores individual payment gateway configurations (e.g., Stripe, PayPal).
-       * @path /users/{userId}/paymentGatewayConfigurations/{configId}
-       * @allow (create) User 'abc' creating a config at /users/abc/paymentGatewayConfigurations/conf123.
-       * @deny (get) User 'xyz' attempting to read user 'abc's payment configuration.
-       * @principle Authorization Independence via path-based ownership.
-       */
       match /paymentGatewayConfigurations/{configId} {
-        allow get, list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.id == configId;
-        allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-        allow delete: if isExistingOwner(userId);
+        allow read, write: if isOwner(userId);
       }
 
-      /**
-       * @description Stores configurations for monitoring Gmail accounts for payment emails.
-       * @path /users/{userId}/gmailListenerConfigurations/{configId}
-       * @allow (list) User 'abc' fetching all their own Gmail listeners.
-       * @deny (update) User 'abc' trying to change the 'id' of an existing listener config.
-       * @principle Relational integrity and immutability of primary keys.
-       */
       match /gmailListenerConfigurations/{configId} {
-        allow get, list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.id == configId;
-        allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-        allow delete: if isExistingOwner(userId);
+        allow read, write: if isOwner(userId);
       }
 
-      /**
-       * @description Stores webhook settings for notifying external systems of events.
-       * @path /users/{userId}/webhookConfigurations/{configId}
-       * @allow (delete) User 'abc' deleting their own webhook configuration.
-       * @deny (create) User 'abc' trying to create a webhook under user 'xyz's path.
-       * @principle Structural segregation of user-specific private data.
-       */
       match /webhookConfigurations/{configId} {
-        allow get, list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.id == configId;
-        allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-        allow delete: if isExistingOwner(userId);
+        allow read, write: if isOwner(userId);
       }
     }
 
-    // Default deny for any unmatched paths
     match /{document=**} {
       allow read, write: if false;
     }

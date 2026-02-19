@@ -1,249 +1,133 @@
+
 {
   "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Thông tin hồ sơ người dùng bao gồm hạn mức giao dịch và gói cước.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "UID của người dùng từ Firebase Auth."
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "planName": {
+          "type": "string",
+          "enum": ["Free", "Pro", "Enterprise"]
+        },
+        "transactionLimit": {
+          "type": "number",
+          "description": "Số lượng giao dịch tối đa trong tháng."
+        },
+        "transactionCount": {
+          "type": "number",
+          "description": "Số lượng giao dịch đã thực hiện trong tháng hiện tại."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "email", "planName", "transactionLimit", "transactionCount"]
+    },
     "PaymentGatewayConfiguration": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "PaymentGatewayConfiguration",
       "type": "object",
-      "description": "Configuration settings for integrating with a specific payment gateway within the PayMailHook application.",
+      "description": "Cấu hình cổng thanh toán.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the PaymentGatewayConfiguration entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "A user-friendly name for this payment gateway configuration (e.g., 'Stripe Production', 'PayPal Sandbox')."
-        },
-        "gatewayType": {
-          "type": "string",
-          "description": "The type of payment gateway being configured (e.g., 'Stripe', 'PayPal', 'BankTransfer')."
-        },
-        "apiKey": {
-          "type": "string",
-          "description": "The API key or credentials for accessing the payment gateway. (Note: Store sensitive information securely outside direct database if possible)."
-        },
-        "merchantId": {
-          "type": "string",
-          "description": "The merchant identifier associated with this payment gateway account."
-        },
-        "currency": {
-          "type": "string",
-          "description": "The primary currency configured for transactions processed by this gateway (e.g., 'USD', 'VND')."
-        },
-        "isEnabled": {
-          "type": "boolean",
-          "description": "Indicates whether this payment gateway configuration is active and enabled for use."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when this configuration was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when this configuration was last updated.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "gatewayType": { "type": "string" },
+        "apiKey": { "type": "string" },
+        "merchantId": { "type": "string" },
+        "currency": { "type": "string" },
+        "isEnabled": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "name",
-        "gatewayType",
-        "apiKey",
-        "merchantId",
-        "currency",
-        "isEnabled",
-        "createdAt",
-        "updatedAt"
-      ]
+      "required": ["id", "name", "gatewayType", "merchantId", "currency", "isEnabled"]
     },
     "GmailListenerConfiguration": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "GmailListenerConfiguration",
       "type": "object",
-      "description": "Configuration settings for monitoring a specific Gmail account for payment confirmation emails.",
+      "description": "Cấu hình lắng nghe Gmail.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the GmailListenerConfiguration entity."
-        },
-        "monitoredEmailAddress": {
-          "type": "string",
-          "description": "The Gmail address that the application will monitor for payment confirmation emails.",
-          "format": "email"
-        },
-        "bankSenderEmailPatterns": {
-          "type": "array",
-          "description": "An array of email address patterns (e.g., 'noreply@bank.com', '*@mybank.vn') from which payment confirmation emails are expected.",
-          "items": {
-            "type": "string"
-          }
-        },
-        "confirmationKeywords": {
-          "type": "array",
-          "description": "An array of keywords or phrases (case-insensitive) to search for in email subjects or bodies to confirm a successful payment.",
-          "items": {
-            "type": "string"
-          }
-        },
-        "isEnabled": {
-          "type": "boolean",
-          "description": "Indicates whether this Gmail listener is active and enabled."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when this configuration was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when this configuration was last updated.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "monitoredEmailAddress": { "type": "string", "format": "email" },
+        "bankSenderEmailPatterns": { "type": "array", "items": { "type": "string" } },
+        "confirmationKeywords": { "type": "array", "items": { "type": "string" } },
+        "isEnabled": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "monitoredEmailAddress",
-        "bankSenderEmailPatterns",
-        "confirmationKeywords",
-        "isEnabled",
-        "createdAt",
-        "updatedAt"
-      ]
+      "required": ["id", "monitoredEmailAddress", "isEnabled"]
     },
     "WebhookConfiguration": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "WebhookConfiguration",
       "type": "object",
-      "description": "Configuration settings for triggering webhooks to notify the main website about payment events.",
+      "description": "Cấu hình Webhook gửi về WordPress.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the WebhookConfiguration entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "A descriptive name for this webhook configuration (e.g., 'Payment Confirmation Webhook')."
-        },
-        "targetUrl": {
-          "type": "string",
-          "description": "The URL endpoint where the webhook payload will be sent.",
-          "format": "uri"
-        },
-        "secretToken": {
-          "type": "string",
-          "description": "A secret token used to sign or verify webhook payloads for security purposes. (Note: Store sensitive information securely)."
-        },
-        "triggerEvent": {
-          "type": "string",
-          "description": "The type of event that will trigger this webhook (e.g., 'payment_received', 'payment_failed')."
-        },
-        "isEnabled": {
-          "type": "boolean",
-          "description": "Indicates whether this webhook configuration is active and enabled."
-        },
-        "retryAttempts": {
-          "type": "number",
-          "description": "The maximum number of times to retry sending the webhook if it initially fails."
-        },
-        "retryIntervalSeconds": {
-          "type": "number",
-          "description": "The time interval in seconds between retry attempts for sending the webhook."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when this configuration was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when this configuration was last updated.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "targetUrl": { "type": "string", "format": "uri" },
+        "secretToken": { "type": "string" },
+        "triggerEvent": { "type": "string" },
+        "isEnabled": { "type": "boolean" },
+        "retryAttempts": { "type": "number" },
+        "retryIntervalSeconds": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "name",
-        "targetUrl",
-        "secretToken",
-        "triggerEvent",
-        "isEnabled",
-        "retryAttempts",
-        "retryIntervalSeconds",
-        "createdAt",
-        "updatedAt"
-      ]
+      "required": ["id", "name", "targetUrl", "isEnabled"]
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["password", "google.com"]
   },
   "firestore": {
     "structure": [
       {
-        "path": "/users/{userId}/paymentGatewayConfigurations/{paymentGatewayConfigurationId}",
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "userProfile",
+          "schema": { "$ref": "#/backend/entities/UserProfile" },
+          "description": "Thông tin hồ sơ và hạn mức của người dùng."
+        }
+      },
+      {
+        "path": "/users/{userId}/paymentGatewayConfigurations/{id}",
         "definition": {
           "entityName": "paymentGatewayConfiguration",
-          "schema": {
-            "$ref": "#/backend/entities/PaymentGatewayConfiguration"
-          },
-          "description": "Stores individual payment gateway configurations. Access is restricted to the user specified by `userId` in the path, ensuring authorization independence. This collection represents private data owned by the user.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user who owns this payment gateway configuration."
-            },
-            {
-              "name": "paymentGatewayConfigurationId",
-              "description": "The unique identifier for the specific payment gateway configuration."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/PaymentGatewayConfiguration" },
+          "description": "Cấu hình cổng thanh toán cá nhân."
         }
       },
       {
-        "path": "/users/{userId}/gmailListenerConfigurations/{gmailListenerConfigurationId}",
+        "path": "/users/{userId}/gmailListenerConfigurations/{id}",
         "definition": {
           "entityName": "gmailListenerConfiguration",
-          "schema": {
-            "$ref": "#/backend/entities/GmailListenerConfiguration"
-          },
-          "description": "Stores individual Gmail listener configurations. Access is restricted to the user specified by `userId` in the path, ensuring authorization independence. This collection represents private data owned by the user.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user who owns this Gmail listener configuration."
-            },
-            {
-              "name": "gmailListenerConfigurationId",
-              "description": "The unique identifier for the specific Gmail listener configuration."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/GmailListenerConfiguration" },
+          "description": "Cấu hình Gmail Listener cá nhân."
         }
       },
       {
-        "path": "/users/{userId}/webhookConfigurations/{webhookConfigurationId}",
+        "path": "/users/{userId}/webhookConfigurations/{id}",
         "definition": {
           "entityName": "webhookConfiguration",
-          "schema": {
-            "$ref": "#/backend/entities/WebhookConfiguration"
-          },
-          "description": "Stores individual webhook configurations. Access is restricted to the user specified by `userId` in the path, ensuring authorization independence. This collection represents private data owned by the user.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user who owns this webhook configuration."
-            },
-            {
-              "name": "webhookConfigurationId",
-              "description": "The unique identifier for the specific webhook configuration."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/WebhookConfiguration" },
+          "description": "Cấu hình Webhook cá nhân gửi về WordPress."
         }
       }
-    ],
-    "reasoning": "The recommended Firestore structure for PayMailHook leverages a user-centric, hierarchical path design to ensure strong authorization independence, clear data segregation, and efficient security rule evaluation. All configuration entities (PaymentGatewayConfiguration, GmailListenerConfiguration, WebhookConfiguration) are stored as subcollections under a specific user's document. This approach directly embeds ownership into the document path, eliminating the need for complex authorization lookups or custom claims.\n\nAuthorization Independence (Denormalization Strategy):\nThe structure users/{userId}/<configurationType>/{configId} directly embeds the owner's identifier (userId) into the path of each configuration document. For example, a PaymentGatewayConfiguration is stored at users/{userId}/paymentGatewayConfigurations/{paymentGatewayConfigurationId}. This design makes the userId a direct part of the document's addressable key. Security rules can then directly compare request.auth.uid with the {userId} wildcard from the path (e.g., allow read, write: if request.auth.uid == userId;). This eliminates any need for get() operations to check parent document attributes for authorization, adhering strictly to the principle of Authorization Independence. The ownership context is 'denormalized' into the path itself, making authorization checks atomic, robust, and easy to debug.\n\nSupport for QAPs (Queries Are Not Filters):\nThe structure supports secure list operations (QAPs) through both Structural Segregation and Path-Based Ownership:\n1.  Structural Segregation: Each type of configuration (PaymentGatewayConfiguration, GmailListenerConfiguration, WebhookConfiguration) is placed in its own dedicated subcollection (paymentGatewayConfigurations, gmailListenerConfigurations, webhookConfigurations) under the user's path. This ensures that all documents within a given collection share the same schema and security posture. This simplifies security rules, as rules applied to a specific subcollection can assume a consistent data model and ownership pattern.\n2.  Path-Based Ownership: By nesting configurations under /users/{userId}/..., the system naturally enforces query boundaries. A user can only issue queries against their own userId path segment. For instance, a query for paymentGatewayConfigurations made by request.auth.uid = 'userA_id' would target /users/userA_id/paymentGatewayConfigurations. Security rules ensure that only userA_id can access this path, effectively preventing users from querying or listing configurations belonging to other users. This ensures that no unauthorized data is returned in query results, upholding the QAP principle by making security enforcement structural rather than relying on post-query filtering."
+    ]
   }
 }
