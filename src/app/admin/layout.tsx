@@ -2,7 +2,7 @@
 "use client";
 
 import { SidebarProvider, SidebarInset, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarGroup, SidebarGroupLabel, SidebarFooter } from "@/components/ui/sidebar";
-import { ShieldCheck, Users, BarChart3, Settings, LogOut, Globe, Bell } from "lucide-react";
+import { ShieldCheck, Users, BarChart3, Settings, LogOut, Globe, Bell, FileCode } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -44,6 +44,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   <Link href="/admin/alerts" className="flex items-center gap-3 px-6 py-2 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">
                     <Bell className="w-5 h-5" />
                     <span>Cảnh báo cước</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Tài liệu hệ thống">
+                  <Link href="/admin/system-docs" className="flex items-center gap-3 px-6 py-2 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">
+                    <FileCode className="w-5 h-5" />
+                    <span>Tài liệu hệ thống</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
