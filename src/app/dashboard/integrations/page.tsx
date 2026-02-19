@@ -4,12 +4,62 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Mail, RefreshCw, ShieldCheck, Zap, CheckCircle2, Globe, AlertCircle } from "lucide-react";
-import { useState } from "react";
+import { Mail, RefreshCw, ShieldCheck, Zap, CheckCircle2, Globe, AlertCircle, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
+import { collection, query, limit, doc } from "firebase/firestore";
+import { useToast } from "@/hooks/use-toast";
 
 export default function IntegrationsPage() {
-  const [isConnected, setIsConnected] = useState(false);
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  
+  const gmailQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return query(collection(firestore, "users", user.uid, "gmailListenerConfigurations"), limit(1));
+  }, [firestore, user?.uid]);
+
+  const { data: gmailConfigs, isLoading } = useCollection(gmailQuery);
+  const config = gmailConfigs?.[0];
+  const isConnected = !!config?.isEnabled;
+
+  const handleToggleConnect = () => {
+    if (!firestore || !user?.uid) return;
+
+    if (isConnected) {
+      // Giả lập ngắt kết nối
+      const ref = doc(firestore, "users", user.uid, "gmailListenerConfigurations", config.id);
+      updateDocumentNonBlocking(ref, { isEnabled: false, updatedAt: new Date().toISOString() });
+      toast({ title: "Đã ngắt kết nối Gmail" });
+    } else {
+      // Giả lập kết nối OAuth
+      const data = {
+        monitoredEmailAddress: user.email || "user@gmail.com",
+        isEnabled: true,
+        bankSenderEmailPatterns: ["no-reply@bank.com", "ebanking@notification.vn"],
+        confirmationKeywords: ["chuyen tien", "biendoi", "received"],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      if (config) {
+        const ref = doc(firestore, "users", user.uid, "gmailListenerConfigurations", config.id);
+        updateDocumentNonBlocking(ref, data);
+      } else {
+        const colRef = collection(firestore, "users", user.uid, "gmailListenerConfigurations");
+        addDocumentNonBlocking(colRef, data);
+      }
+      
+      toast({
+        title: "Kết nối thành công!",
+        description: "Hệ thống đã được cấp quyền đọc email thông báo biến động số dư.",
+      });
+    }
+  };
+
+  if (isLoading) return <div className="p-8 text-center"><Loader2 className="animate-spin mx-auto w-8 h-8 text-accent" /></div>;
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -19,8 +69,8 @@ export default function IntegrationsPage() {
           <p className="text-muted-foreground">Sử dụng Google OAuth 2.0 để phát hiện email ngân hàng tức thì.</p>
         </div>
         {isConnected && (
-          <Button variant="outline" className="border-accent text-accent">
-            <RefreshCw className="w-4 h-4 mr-2" /> Làm mới kết nối
+          <Button variant="outline" className="border-accent text-accent" onClick={handleToggleConnect}>
+            <RefreshCw className="w-4 h-4 mr-2" /> Ngắt kết nối
           </Button>
         )}
       </div>
@@ -81,7 +131,7 @@ export default function IntegrationsPage() {
                   <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center shrink-0 font-bold group-hover:scale-110 transition-transform">3</div>
                   <div>
                     <p className="font-bold">Hoàn tất & Tự động hóa</p>
-                    <p className="text-sm text-muted-foreground">Hệ thống nhận Token và bắt đầu lắng nghe mã <b>TTxxxxxx</b> để bắn về WordPress.</p>
+                    <p className="text-sm text-muted-foreground">Hệ thống nhận Token và bắt đầu lắng nghe các biến động số dư ngân hàng.</p>
                   </div>
                 </div>
               </div>
@@ -90,7 +140,7 @@ export default function IntegrationsPage() {
                 <Button 
                   size="lg" 
                   className="w-full bg-accent hover:bg-accent/90 h-16 text-lg font-bold shadow-lg shadow-accent/20"
-                  onClick={() => setIsConnected(true)}
+                  onClick={handleToggleConnect}
                 >
                   <Mail className="mr-3 w-6 h-6" /> Kết nối ngay với Google
                 </Button>
@@ -99,7 +149,7 @@ export default function IntegrationsPage() {
                   <CheckCircle2 className="w-8 h-8" />
                   <div className="flex-1">
                     <p className="font-bold text-lg">Đã thiết lập thành công!</p>
-                    <p className="text-sm opacity-90 font-medium">Đang lắng nghe hòm thư: <span className="underline italic">shop-admin@gmail.com</span></p>
+                    <p className="text-sm opacity-90 font-medium">Đang lắng nghe hòm thư: <span className="underline italic">{config.monitoredEmailAddress}</span></p>
                   </div>
                 </div>
               )}
@@ -127,7 +177,7 @@ export default function IntegrationsPage() {
                 <h3 className="font-bold">Tương thích WordPress</h3>
               </div>
               <p className="text-sm opacity-90 leading-relaxed">
-                Khi AI phát hiện mã <b>TTxxxxxx</b>, nó sẽ ngay lập tức gửi dữ liệu về website WordPress để khớp với đơn hàng tương ứng. Đảm bảo bạn đã cấu hình URL Webhook.
+                Khi AI phát hiện mã tham chiếu hợp lệ, nó sẽ ngay lập tức gửi dữ liệu về website WordPress để khớp với đơn hàng tương ứng. Đảm bảo bạn đã cấu hình URL Webhook.
               </p>
             </div>
           </Card>
