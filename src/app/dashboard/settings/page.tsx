@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Save, Shield, Copy, CheckCircle2 } from "lucide-react";
+import { Save, Shield, Copy, FileCode, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function SettingsPage() {
@@ -49,7 +49,7 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="webhook-url">URL Webhook nhận dữ liệu</Label>
+              <Label htmlFor="webhook-url">URL Webhook nhận dữ liệu (WordPress API)</Label>
               <Input 
                 id="webhook-url" 
                 placeholder="https://..." 
@@ -58,7 +58,7 @@ export default function SettingsPage() {
                 className="font-mono text-sm"
               />
               <p className="text-xs text-muted-foreground italic">
-                Mẹo: Bạn có thể sử dụng các Plugin như "WP Webhooks" để tạo đường dẫn này nhanh chóng.
+                Ví dụ: https://domain-cua-ban.com/wp-json/paymail/v1/confirm
               </p>
             </div>
 
@@ -89,20 +89,28 @@ export default function SettingsPage() {
 
         <Card className="border-none shadow-md bg-secondary/30">
           <CardHeader>
-            <CardTitle className="text-lg">Hướng dẫn cho WordPress</CardTitle>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <FileCode className="w-5 h-5" /> 
+              Hướng dẫn cho WordPress
+            </CardTitle>
           </CardHeader>
           <CardContent className="text-sm space-y-4">
+            <p>Để website WordPress có thể hiểu được mã <b>TTxxxxxx</b> và tự động duyệt đơn hàng, bạn hãy làm theo các bước:</p>
             <div className="flex gap-4">
               <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center font-bold text-primary shrink-0 shadow-sm">1</div>
-              <p className="pt-1">Cài đặt Plugin xử lý Webhook trên WordPress (ví dụ: WP Webhooks).</p>
+              <p className="pt-1">Mở file <code>docs/wordpress-integration-sample.php</code> trong dự án này để copy đoạn mã mẫu.</p>
             </div>
             <div className="flex gap-4">
               <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center font-bold text-primary shrink-0 shadow-sm">2</div>
-              <p className="pt-1">Tạo một Action "Receive Data" và dán URL vào ô phía trên.</p>
+              <p className="pt-1">Dán đoạn mã đó vào file <b>functions.php</b> của Giao diện (Theme) bạn đang dùng trên WordPress.</p>
             </div>
             <div className="flex gap-4">
               <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center font-bold text-primary shrink-0 shadow-sm">3</div>
-              <p className="pt-1">Khi nhận được dữ liệu, hãy tìm đơn hàng có mã trùng với <code className="bg-white px-1 rounded">referenceCode</code> (có dạng TTxxxxxx) và cập nhật trạng thái.</p>
+              <p className="pt-1">Thay thế mã <code>Secret Key</code> trong đoạn mã PHP bằng mã bạn vừa sao chép ở trên.</p>
+            </div>
+            <div className="flex gap-4">
+              <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center font-bold text-primary shrink-0 shadow-sm">4</div>
+              <p className="pt-1">Khi khách thanh toán với nội dung <b>TT123456</b>, WordPress sẽ tự động tìm đơn hàng #123456 và đổi sang trạng thái "Thành công".</p>
             </div>
           </CardContent>
         </Card>
