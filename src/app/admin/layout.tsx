@@ -36,7 +36,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     <Users className="w-5 h-5" />
                     <span>Khách hàng</span>
                   </Link>
-                </SidebarMenuItem>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Cảnh báo">
                   <Link href="/admin/alerts" className="flex items-center gap-3 px-6 py-2 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">
