@@ -7,13 +7,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, SlidersHorizontal, UserPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase";
+import { collection, doc } from "firebase/firestore";
 
 export default function UserManagementPage() {
-  const users = [
-    { id: "USR-001", name: "Nguyễn Văn A", plan: "Pro", limit: 1000, used: 950, joined: "12/10/2024" },
-    { id: "USR-002", name: "Lê Văn B", plan: "Free", limit: 100, used: 20, joined: "15/11/2024" },
-    { id: "USR-003", name: "Trần Thị C", plan: "Enterprise", limit: 10000, used: 4500, joined: "01/01/2024" },
-  ];
+  const firestore = useFirestore();
+
+  const usersQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, "users");
+  }, [firestore]);
+
+  const { data: users, isLoading } = useCollection(usersQuery);
+
+  const handleUpdateLimit = (userId: string, currentLimit: number) => {
+    if (!firestore) return;
+    const newLimit = currentLimit + 500;
+    const docRef = doc(firestore, "users", userId);
+    updateDocumentNonBlocking(docRef, { transactionLimit: newLimit });
+  };
+
+  if (isLoading) return <div className="p-8">Đang tải danh sách khách hàng...</div>;
 
   return (
     <div className="space-y-6">
@@ -34,28 +48,31 @@ export default function UserManagementPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Tên</TableHead>
+                <TableHead>Email</TableHead>
                 <TableHead>Gói</TableHead>
                 <TableHead>Đã dùng</TableHead>
                 <TableHead>Hạn mức</TableHead>
-                <TableHead>Ngày tham gia</TableHead>
                 <TableHead className="text-right">Tác vụ</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((u) => (
+              {users?.map((u) => (
                 <TableRow key={u.id}>
-                  <TableCell className="font-mono text-[10px]">{u.id}</TableCell>
-                  <TableCell className="font-bold">{u.name}</TableCell>
-                  <TableCell><Badge variant="outline">{u.plan}</Badge></TableCell>
-                  <TableCell className={u.used / u.limit > 0.9 ? "text-red-500 font-bold" : ""}>
-                    {u.used.toLocaleString()}
+                  <TableCell className="font-bold">{u.email}</TableCell>
+                  <TableCell><Badge variant="outline">{u.planName}</Badge></TableCell>
+                  <TableCell className={u.transactionCount / u.transactionLimit > 0.9 ? "text-red-500 font-bold" : ""}>
+                    {u.transactionCount?.toLocaleString()}
                   </TableCell>
-                  <TableCell className="font-medium">{u.limit.toLocaleString()}</TableCell>
-                  <TableCell className="text-muted-foreground text-xs">{u.joined}</TableCell>
+                  <TableCell className="font-medium">{u.transactionLimit?.toLocaleString()}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" className="text-accent">Sửa hạn mức</Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-accent"
+                      onClick={() => handleUpdateLimit(u.id, u.transactionLimit)}
+                    >
+                      +500 Hạn mức
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}

@@ -1,20 +1,64 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Save, Shield, Copy, FileCode, CheckCircle2 } from "lucide-react";
+import { Save, Shield, Copy, FileCode } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useUser, useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase";
+import { collection, query, limit } from "firebase/firestore";
 
 export default function SettingsPage() {
-  const [webhookUrl, setWebhookUrl] = useState("https://your-wordpress-site.com/wp-json/paymail/v1/confirm");
-  const [secretKey, setSecretKey] = useState("pmh_live_789xyz123abc");
+  const { user } = useUser();
+  const firestore = useFirestore();
   const { toast } = useToast();
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [secretKey, setSecretKey] = useState("");
+
+  const webhooksQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return query(collection(firestore, "users", user.uid, "webhookConfigurations"), limit(1));
+  }, [firestore, user?.uid]);
+
+  const { data: webhooks, isLoading } = useCollection(webhooksQuery);
+
+  useEffect(() => {
+    if (webhooks && webhooks.length > 0) {
+      setWebhookUrl(webhooks[0].targetUrl || "");
+      setSecretKey(webhooks[0].secretToken || "");
+    } else if (user?.uid && !isLoading && (!webhooks || webhooks.length === 0)) {
+      // Generate a default secret key if none exists
+      setSecretKey(`pmh_live_${Math.random().toString(36).substring(7)}`);
+    }
+  }, [webhooks, user?.uid, isLoading]);
 
   const handleSave = () => {
+    if (!firestore || !user?.uid) return;
+
+    if (webhooks && webhooks.length > 0) {
+      const docRef = query(collection(firestore, "users", user.uid, "webhookConfigurations")).type === 'collection' ? null : null; // simplified
+      // Use direct doc reference instead
+      const { doc } = require("firebase/firestore");
+      const ref = doc(firestore, "users", user.uid, "webhookConfigurations", webhooks[0].id);
+      updateDocumentNonBlocking(ref, {
+        targetUrl: webhookUrl,
+        secretToken: secretKey,
+        updatedAt: new Date().toISOString()
+      });
+    } else {
+      const colRef = collection(firestore, "users", user.uid, "webhookConfigurations");
+      addDocumentNonBlocking(colRef, {
+        name: "WordPress Main",
+        targetUrl: webhookUrl,
+        secretToken: secretKey,
+        isEnabled: true,
+        createdAt: new Date().toISOString()
+      });
+    }
+
     toast({
       title: "Đã lưu cấu hình",
       description: "Website WordPress của bạn giờ đã có thể nhận dữ liệu từ PayMailHook.",
@@ -28,6 +72,8 @@ export default function SettingsPage() {
       description: "Mã bí mật đã được lưu vào bộ nhớ tạm.",
     });
   };
+
+  if (isLoading) return <div className="p-8">Đang tải cấu hình...</div>;
 
   return (
     <div className="max-w-4xl space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -76,7 +122,7 @@ export default function SettingsPage() {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Sử dụng mã này trên WordPress để xác thực rằng dữ liệu được gửi từ đúng hệ thống PayMailHook.
+                Sử dụng mã này trên WordPress để xác thực dữ liệu gửi từ PayMailHook.
               </p>
             </div>
           </CardContent>
@@ -98,19 +144,15 @@ export default function SettingsPage() {
             <p>Để website WordPress có thể hiểu được mã <b>TTxxxxxx</b> và tự động duyệt đơn hàng, bạn hãy làm theo các bước:</p>
             <div className="flex gap-4">
               <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center font-bold text-primary shrink-0 shadow-sm">1</div>
-              <p className="pt-1">Mở file <code>docs/wordpress-integration-sample.php</code> trong dự án này để copy đoạn mã mẫu.</p>
+              <p className="pt-1">Mở file <code>docs/wordpress-integration-sample.php</code> để copy đoạn mã mẫu.</p>
             </div>
             <div className="flex gap-4">
               <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center font-bold text-primary shrink-0 shadow-sm">2</div>
-              <p className="pt-1">Dán đoạn mã đó vào file <b>functions.php</b> của Giao diện (Theme) bạn đang dùng trên WordPress.</p>
+              <p className="pt-1">Dán đoạn mã đó vào file <b>functions.php</b> của Theme trên WordPress.</p>
             </div>
             <div className="flex gap-4">
               <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center font-bold text-primary shrink-0 shadow-sm">3</div>
-              <p className="pt-1">Thay thế mã <code>Secret Key</code> trong đoạn mã PHP bằng mã bạn vừa sao chép ở trên.</p>
-            </div>
-            <div className="flex gap-4">
-              <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center font-bold text-primary shrink-0 shadow-sm">4</div>
-              <p className="pt-1">Khi khách thanh toán với nội dung <b>TT123456</b>, WordPress sẽ tự động tìm đơn hàng #123456 và đổi sang trạng thái "Thành công".</p>
+              <p className="pt-1">Thay thế <code>Secret Key</code> trong PHP bằng mã bạn vừa sao chép ở trên.</p>
             </div>
           </CardContent>
         </Card>
