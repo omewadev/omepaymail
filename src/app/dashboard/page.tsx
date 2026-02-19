@@ -4,8 +4,10 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { CreditCard, CheckCircle2, Mail, Webhook as WebhookIcon, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { CreditCard, CheckCircle2, Mail, Webhook as WebhookIcon, AlertTriangle, ArrowRight } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
+import Link from "next/link";
 
 const data = [
   { name: 'T2', total: 400 },
@@ -23,17 +25,23 @@ export default function OverviewPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Cảnh báo hạn mức */}
+      {/* Cảnh báo hạn mức & Nút thanh toán nhanh */}
       {isWarning && (
-        <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex items-center justify-between">
-          <div className="flex items-center gap-3 text-amber-800">
-            <AlertTriangle className="w-5 h-5 text-amber-600" />
+        <div className="bg-amber-50 border border-amber-200 p-6 rounded-xl flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4 text-amber-800">
+            <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-6 h-6 text-amber-600" />
+            </div>
             <div>
-              <p className="font-bold text-sm">Cảnh báo hạn mức: Bạn đã sử dụng {usage}% gói cước!</p>
-              <p className="text-xs opacity-80">Hãy nâng cấp gói để tránh việc gián đoạn xác nhận đơn hàng.</p>
+              <p className="font-bold text-lg">Cảnh báo: Sắp hết hạn mức giao dịch!</p>
+              <p className="text-sm opacity-80">Bạn đã sử dụng {usage}% gói cước. Hãy nâng cấp để tránh gián đoạn xác nhận đơn hàng WordPress.</p>
             </div>
           </div>
-          <Badge variant="outline" className="border-amber-400 text-amber-700 bg-white">Sắp hết hạn mức</Badge>
+          <Button asChild size="lg" className="bg-amber-600 hover:bg-amber-700 text-white shadow-lg">
+            <Link href="/dashboard/settings" className="flex items-center gap-2 font-bold">
+              Gia hạn & Nâng cấp ngay <ArrowRight className="w-4 h-4" />
+            </Link>
+          </Button>
         </div>
       )}
 
@@ -113,19 +121,7 @@ export default function OverviewPage() {
                 <span className="text-sm">25/12/2024</span>
               </div>
             </div>
-            <div className="space-y-2">
-              <h4 className="text-sm font-bold">Lịch sử nâng cấp</h4>
-              <div className="text-xs space-y-2">
-                <div className="flex justify-between text-muted-foreground border-b pb-1">
-                  <span>Gói Pro (Tháng 11)</span>
-                  <span className="text-primary font-bold">Thành công</span>
-                </div>
-                <div className="flex justify-between text-muted-foreground border-b pb-1">
-                  <span>Gói Pro (Tháng 10)</span>
-                  <span className="text-primary font-bold">Thành công</span>
-                </div>
-              </div>
-            </div>
+            <Button className="w-full bg-accent hover:bg-accent/90">Nâng cấp gói Enterprise</Button>
           </CardContent>
         </Card>
       </div>
