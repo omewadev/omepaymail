@@ -1,0 +1,43 @@
+
+{
+  "entities": {
+    "UserConfig": {
+      "title": "User Configuration",
+      "description": "Stores user-specific settings like Webhook URL and Gmail connection status.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "The unique ID of the user." },
+        "webhookUrl": { "type": "string", "format": "uri", "description": "The URL to send webhook notifications to." },
+        "secretKey": { "type": "string", "description": "A secret key used to sign webhook payloads." },
+        "gmailConnected": { "type": "boolean", "description": "Whether the user has connected their Gmail account." },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "webhookUrl"]
+    },
+    "TransactionLog": {
+      "title": "Transaction Log",
+      "description": "Records of processed transactions and webhook delivery status.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "amount": { "type": "number" },
+        "referenceCode": { "type": "string" },
+        "status": { "type": "string", "enum": ["success", "failed", "pending"] },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "auth": {
+    "providers": ["google.com"]
+  },
+  "firestore": {
+    "/userConfigs/{userId}": {
+      "schema": "UserConfig",
+      "description": "User specific configurations."
+    },
+    "/logs/{logId}": {
+      "schema": "TransactionLog",
+      "description": "Historical logs of all processed transactions."
+    }
+  }
+}
