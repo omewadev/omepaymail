@@ -4,87 +4,102 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Mail, RefreshCw, ShieldCheck, Zap, CheckCircle2, Globe } from "lucide-react";
+import { Mail, RefreshCw, ShieldCheck, Zap, CheckCircle2, Globe, AlertCircle } from "lucide-react";
 import { useState } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function IntegrationsPage() {
   const [isConnected, setIsConnected] = useState(false);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-headline font-bold text-primary">Kết nối Gmail Real-time</h2>
-          <p className="text-muted-foreground">Sử dụng Google Pub/Sub để phát hiện email ngân hàng tức thì (3-5 giây).</p>
+          <p className="text-muted-foreground">Sử dụng Google OAuth 2.0 để phát hiện email ngân hàng tức thì.</p>
         </div>
         {isConnected && (
           <Button variant="outline" className="border-accent text-accent">
-            <RefreshCw className="w-4 h-4 mr-2" /> Làm mới Token
+            <RefreshCw className="w-4 h-4 mr-2" /> Làm mới kết nối
           </Button>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="md:col-span-2 border-none shadow-md">
+      {!isConnected && (
+        <Alert className="bg-primary/5 border-primary/20">
+          <AlertCircle className="h-4 w-4 text-primary" />
+          <AlertTitle className="text-primary font-bold">Lưu ý quan trọng</AlertTitle>
+          <AlertDescription className="text-sm">
+            Hệ thống <b>KHÔNG</b> yêu cầu bạn nhập mật khẩu Gmail. Bạn sẽ được chuyển hướng sang trang xác thực an toàn của Google để cấp quyền đọc thư.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2 border-none shadow-md overflow-hidden">
+          <div className="h-1 bg-accent" />
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${isConnected ? 'bg-green-100' : 'bg-accent/10'}`}>
-                  <Mail className={`${isConnected ? 'text-green-600' : 'text-accent'} w-6 h-6`} />
-                </div>
-                <div>
-                  <CardTitle>Xác thực Google OAuth 2.0</CardTitle>
-                  <CardDescription>
-                    Trạng thái: {isConnected ? 
-                      <Badge className="bg-green-500">ĐANG HOẠT ĐỘNG</Badge> : 
-                      <Badge variant="destructive">CHƯA CẤU HÌNH</Badge>
-                    }
-                  </CardDescription>
-                </div>
+            <div className="flex items-center gap-4">
+              <div className={`w-14 h-14 rounded-full flex items-center justify-center ${isConnected ? 'bg-green-100' : 'bg-accent/10'}`}>
+                <Mail className={`${isConnected ? 'text-green-600' : 'text-accent'} w-7 h-7`} />
+              </div>
+              <div>
+                <CardTitle>Xác thực Google OAuth 2.0</CardTitle>
+                <CardDescription>
+                  Trạng thái: {isConnected ? 
+                    <Badge className="bg-green-500">ĐANG HOẠT ĐỘNG</Badge> : 
+                    <Badge variant="destructive">CHƯA CẤU HÌNH</Badge>
+                  }
+                </CardDescription>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="p-6 border rounded-xl bg-muted/30 space-y-6">
-              <div className="flex items-start gap-4 p-4 bg-primary/5 rounded-lg border border-primary/10">
-                <Zap className="w-5 h-5 text-primary mt-1 shrink-0" />
-                <div>
-                  <h4 className="font-bold text-primary">Cơ chế Push Notification</h4>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Hệ thống không quét email theo cách thủ công. Ngay khi ngân hàng gửi mail, Google sẽ chủ động thông báo cho PayMailHook xử lý. Đảm bảo độ trễ thấp nhất thị trường.
-                  </p>
+          <CardContent className="space-y-8">
+            <div className="space-y-6">
+              <h4 className="font-bold text-lg text-primary flex items-center gap-2">
+                <Zap className="w-5 h-5 text-accent" /> Quy trình kết nối 3 bước:
+              </h4>
+              
+              <div className="grid gap-6">
+                <div className="flex gap-4 group">
+                  <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center shrink-0 font-bold group-hover:scale-110 transition-transform">1</div>
+                  <div>
+                    <p className="font-bold">Bấm nút "Kết nối với Google"</p>
+                    <p className="text-sm text-muted-foreground">Bạn sẽ được chuyển sang trang <code>accounts.google.com</code> của Google.</p>
+                  </div>
+                </div>
+                
+                <div className="flex gap-4 group">
+                  <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center shrink-0 font-bold group-hover:scale-110 transition-transform">2</div>
+                  <div>
+                    <p className="font-bold">Chọn tài khoản & Cấp quyền</p>
+                    <p className="text-sm text-muted-foreground">Chọn email nhận thông báo ngân hàng và tích chọn quyền <code>gmail.readonly</code>.</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-4 group">
+                  <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center shrink-0 font-bold group-hover:scale-110 transition-transform">3</div>
+                  <div>
+                    <p className="font-bold">Hoàn tất & Tự động hóa</p>
+                    <p className="text-sm text-muted-foreground">Hệ thống nhận Token và bắt đầu lắng nghe mã <b>TTxxxxxx</b> để bắn về WordPress.</p>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid gap-4">
-                <div className="flex gap-4">
-                  <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center shrink-0">1</div>
-                  <p className="text-sm">Bấm <b>"Kết nối với Google"</b> và cấp quyền <code>gmail.readonly</code>.</p>
-                </div>
-                <div className="flex gap-4">
-                  <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center shrink-0">2</div>
-                  <p className="text-sm">Hệ thống đăng ký <b>Watch</b> với Google Cloud Pub/Sub cho hòm thư của bạn.</p>
-                </div>
-                <div className="flex gap-4">
-                  <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center shrink-0">3</div>
-                  <p className="text-sm">Kể từ bây giờ, mọi mã <b>TTxxxxxx</b> về mail sẽ tự động bắn sang WordPress.</p>
-                </div>
-              </div>
-              
               {!isConnected ? (
                 <Button 
                   size="lg" 
-                  className="w-full bg-accent hover:bg-accent/90 mt-4 h-14 text-lg"
+                  className="w-full bg-accent hover:bg-accent/90 h-16 text-lg font-bold shadow-lg shadow-accent/20"
                   onClick={() => setIsConnected(true)}
                 >
-                  <Mail className="mr-2" /> Bắt đầu kết nối Gmail
+                  <Mail className="mr-3 w-6 h-6" /> Kết nối ngay với Google
                 </Button>
               ) : (
-                <div className="bg-green-50 p-4 rounded-lg flex items-center gap-3 text-green-700 border border-green-200">
-                  <CheckCircle2 className="w-5 h-5" />
+                <div className="bg-green-50 p-6 rounded-xl flex items-center gap-4 text-green-700 border border-green-200 animate-in zoom-in-95">
+                  <CheckCircle2 className="w-8 h-8" />
                   <div className="flex-1">
-                    <span className="font-medium">Đã thiết lập Webhook Gmail tức thì cho: shop-admin@gmail.com</span>
-                    <p className="text-xs opacity-80">Lần cuối nhận tín hiệu: Vừa xong</p>
+                    <p className="font-bold text-lg">Đã thiết lập thành công!</p>
+                    <p className="text-sm opacity-90 font-medium">Đang lắng nghe hòm thư: <span className="underline italic">shop-admin@gmail.com</span></p>
                   </div>
                 </div>
               )}
@@ -93,14 +108,14 @@ export default function IntegrationsPage() {
         </Card>
 
         <div className="space-y-6">
-          <Card className="border-none shadow-md p-6 bg-white">
+          <Card className="border-none shadow-md p-6 bg-slate-900 text-white">
             <div className="text-center space-y-4">
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                <ShieldCheck className="w-8 h-8 text-primary" />
+              <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center mx-auto">
+                <ShieldCheck className="w-8 h-8 text-accent" />
               </div>
-              <h3 className="text-xl font-bold">An toàn tối đa</h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Chúng tôi sử dụng cơ chế <b>Short-lived Access Tokens</b>. Quyền truy cập email của bạn được quản lý bởi Google, bạn có thể ngắt kết nối bất cứ lúc nào tại <i>Google Account Settings</i>.
+              <h3 className="text-xl font-bold">An toàn & Riêng tư</h3>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                Chúng tôi không bao giờ lưu mật khẩu Gmail của bạn. Quyền truy cập có thể bị hủy bất cứ lúc nào từ trang quản lý tài khoản Google của bạn.
               </p>
             </div>
           </Card>
@@ -109,10 +124,10 @@ export default function IntegrationsPage() {
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <Globe className="w-5 h-5" />
-                <h3 className="font-bold">WordPress Sync</h3>
+                <h3 className="font-bold">Tương thích WordPress</h3>
               </div>
-              <p className="text-xs opacity-90">
-                Khi có mail, hệ thống sẽ gửi gói tin JSON kèm mã <b>TTxxxxxx</b> về website của bạn. Đảm bảo bạn đã dán code PHP mẫu vào WordPress.
+              <p className="text-sm opacity-90 leading-relaxed">
+                Khi AI phát hiện mã <b>TTxxxxxx</b>, nó sẽ ngay lập tức gửi dữ liệu về website WordPress để khớp với đơn hàng tương ứng. Đảm bảo bạn đã cấu hình URL Webhook.
               </p>
             </div>
           </Card>
