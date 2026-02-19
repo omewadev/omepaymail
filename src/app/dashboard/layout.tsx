@@ -1,3 +1,4 @@
+
 import { SidebarProvider, SidebarInset, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarGroup, SidebarGroupLabel, SidebarFooter } from "@/components/ui/sidebar";
 import { LayoutDashboard, Webhook, Settings, History, Mail, LogOut, CreditCard } from "lucide-react";
 import Link from "next/link";
@@ -51,10 +52,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <SidebarGroupLabel className="px-6 text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">System</SidebarGroupLabel>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Logs">
-                  <Link href="/dashboard/logs" className="flex items-center gap-3 px-6 py-2 transition-colors hover:bg-secondary group">
-                    <History className="w-5 h-5 text-muted-foreground group-hover:text-accent" />
-                    <span className="font-medium">Audit Logs</span>
+                <SidebarMenuButton asChild tooltip="Billing">
+                  <Link href="/dashboard/billing" className="flex items-center gap-3 px-6 py-2 transition-colors hover:bg-secondary group">
+                    <CreditCard className="w-5 h-5 text-muted-foreground group-hover:text-accent" />
+                    <span className="font-medium">Gói cước</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -62,7 +63,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <SidebarMenuButton asChild tooltip="Settings">
                   <Link href="/dashboard/settings" className="flex items-center gap-3 px-6 py-2 transition-colors hover:bg-secondary group">
                     <Settings className="w-5 h-5 text-muted-foreground group-hover:text-accent" />
-                    <span className="font-medium">Settings</span>
+                    <span className="font-medium">Cài đặt</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -73,18 +74,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <SidebarMenuButton asChild>
             <Link href="/" className="flex items-center gap-3 px-4 py-2 text-destructive hover:bg-destructive/10 rounded-md transition-colors">
               <LogOut className="w-5 h-5" />
-              <span className="font-medium">Log out</span>
+              <span className="font-medium">Đăng xuất</span>
             </Link>
           </SidebarMenuButton>
         </SidebarFooter>
       </Sidebar>
       <SidebarInset className="bg-background">
         <header className="h-16 border-b border-border bg-white flex items-center justify-between px-8 sticky top-0 z-10">
-          <h1 className="text-xl font-headline font-bold text-primary">Control Panel</h1>
+          <h1 className="text-xl font-headline font-bold text-primary">Bảng điều khiển</h1>
           <div className="flex items-center gap-4">
             <div className="text-right mr-2 hidden sm:block">
-              <p className="text-sm font-bold">Admin User</p>
-              <p className="text-xs text-muted-foreground">Premium Account</p>
+              <p className="text-sm font-bold">Người dùng App</p>
+              <p className="text-xs text-muted-foreground">Tài khoản Premium</p>
             </div>
             <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-white font-bold">
               AU

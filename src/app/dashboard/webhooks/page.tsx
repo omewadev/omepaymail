@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -7,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Webhook, Plus, Trash2, Send, ExternalLink, Shield, Info, Copy, Check } from "lucide-react";
+import { Webhook, Plus, Trash2, Send, ExternalLink, Shield, Info, Copy, Check, Terminal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
@@ -15,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function WebhooksPage() {
   const { toast } = useToast();
   const [webhooks, setWebhooks] = useState([
-    { id: 1, name: "Website WordPress", url: "https://shop-cua-ban.com/wp-json/paymail/v1/confirm", active: true, events: ["Chuyển khoản đến"] },
+    { id: 1, name: "Merchant API Endpoint", url: "https://your-app.com/api/pay-callback", active: true, events: ["New Bank Transfer"] },
   ]);
 
   const copyToClipboard = (text: string) => {
@@ -30,8 +29,8 @@ export default function WebhooksPage() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-headline font-bold text-primary">Cấu hình Webhooks</h2>
-          <p className="text-muted-foreground">Khai báo nơi PayMailHook sẽ bắn dữ liệu mã TTxxxxxx về.</p>
+          <h2 className="text-3xl font-headline font-bold text-primary">Quản lý Webhooks</h2>
+          <p className="text-muted-foreground">Khai báo các Endpoint sẽ nhận dữ liệu đối soát tự động.</p>
         </div>
         <Button className="bg-accent hover:bg-accent/90 font-bold h-12">
           <Plus className="w-5 h-5 mr-2" /> Thêm Endpoint mới
@@ -39,10 +38,10 @@ export default function WebhooksPage() {
       </div>
 
       <Alert className="bg-primary/5 border-primary/20">
-        <Info className="h-5 w-5 text-primary" />
-        <AlertTitle className="text-primary font-bold text-lg">Hướng dẫn cho WordPress</AlertTitle>
+        <Terminal className="h-5 w-5 text-primary" />
+        <AlertTitle className="text-primary font-bold text-lg">Cơ chế hoạt động chung</AlertTitle>
         <AlertDescription className="text-base mt-2">
-          Hệ thống sẽ gửi một gói tin JSON chứa mã <b>TT123456</b> về website của bạn. Website của bạn cần một "tai lắng nghe" (Endpoint) để nhận mã này và tự động chuyển trạng thái đơn hàng tương ứng.
+          Khi AI phát hiện giao dịch, hệ thống sẽ gửi gói tin JSON chứa mã tham chiếu (ví dụ: <b>TT123456</b>) về Endpoint của bạn. Website của bạn cần xử lý yêu cầu này để tự động hóa quy trình bán hàng.
         </AlertDescription>
       </Alert>
 
@@ -55,7 +54,7 @@ export default function WebhooksPage() {
                 <div className="flex items-center gap-3">
                   <CardTitle className="text-xl font-bold">{hook.name}</CardTitle>
                   <Badge className={hook.active ? "bg-green-500 hover:bg-green-600" : "bg-slate-400"}>
-                    {hook.active ? "Đang chạy" : "Tạm dừng"}
+                    {hook.active ? "Đang hoạt động" : "Tạm dừng"}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground font-mono text-sm bg-muted/50 p-2 rounded-md border">
@@ -75,9 +74,9 @@ export default function WebhooksPage() {
               <div className="grid md:grid-cols-2 gap-8">
                 <div className="space-y-4">
                   <h4 className="font-bold text-primary flex items-center gap-2">
-                    <Shield className="w-4 h-4" /> Bảo mật & Xác thực
+                    <Shield className="w-4 h-4" /> Payload & Security
                   </h4>
-                  <p className="text-sm text-muted-foreground">Mỗi gói tin gửi đi đều đi kèm <code>Secret Key</code> để website WordPress của bạn xác minh dữ liệu đúng từ PayMailHook.</p>
+                  <p className="text-sm text-muted-foreground">Mọi yêu cầu đều được gửi qua HTTPS POST với định dạng JSON, đi kèm Secret Key để bảo mật hệ thống của bạn.</p>
                   <div className="flex flex-wrap gap-2">
                     {hook.events.map(event => (
                       <Badge key={event} variant="outline" className="bg-accent/5 text-accent border-accent/20 font-bold px-3 py-1">
@@ -89,14 +88,14 @@ export default function WebhooksPage() {
                 
                 <div className="p-4 bg-slate-900 rounded-xl border border-slate-800 shadow-inner">
                   <div className="flex items-center justify-between mb-3">
-                    <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Dữ liệu mẫu (JSON)</p>
-                    <Badge variant="outline" className="text-[9px] text-slate-400 border-slate-700">HTTPS POST</Badge>
+                    <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Dữ liệu JSON mẫu</p>
+                    <Badge variant="outline" className="text-[9px] text-slate-400 border-slate-700">POST</Badge>
                   </div>
                   <pre className="text-[12px] font-mono text-green-400 overflow-x-auto leading-relaxed">
 {`{
   "amount": 500000,
   "referenceCode": "TT123456",
-  "sender": "NGUYEN VAN A",
+  "senderName": "NGUYEN VAN A",
   "secretKey": "pmh_live_..."
 }`}
                   </pre>
@@ -109,7 +108,7 @@ export default function WebhooksPage() {
                   <Send className="w-4 h-4 mr-2" /> Gửi thử (Test)
                 </Button>
                 <Button variant="ghost" size="sm" className="font-bold text-primary hover:bg-primary/5">
-                  <Info className="w-4 h-4 mr-2" /> Nhật ký bắn Webhook
+                  <Info className="w-4 h-4 mr-2" /> Lịch sử Webhook
                 </Button>
               </div>
               <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 font-bold">

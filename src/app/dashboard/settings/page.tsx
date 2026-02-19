@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -6,10 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Save, Shield, Copy, FileCode } from "lucide-react";
+import { Save, Shield, Copy, FileCode, Globe, Code2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase";
 import { collection, query, limit, doc } from "firebase/firestore";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function SettingsPage() {
   const { user } = useUser();
@@ -47,7 +47,7 @@ export default function SettingsPage() {
     } else {
       const colRef = collection(firestore, "users", user.uid, "webhookConfigurations");
       addDocumentNonBlocking(colRef, {
-        name: "WordPress Main",
+        name: "Main Webhook",
         targetUrl: webhookUrl,
         secretToken: secretKey,
         isEnabled: true,
@@ -57,7 +57,7 @@ export default function SettingsPage() {
 
     toast({
       title: "Đã lưu cấu hình",
-      description: "Website WordPress của bạn giờ đã có thể nhận dữ liệu từ PayMailHook.",
+      description: "Hệ thống của bạn giờ đã có thể nhận dữ liệu từ PayMailHook.",
     });
   };
 
@@ -65,7 +65,7 @@ export default function SettingsPage() {
     navigator.clipboard.writeText(text);
     toast({
       title: "Đã sao chép",
-      description: "Mã bí mật đã được lưu vào bộ nhớ tạm.",
+      description: "Thông tin đã được lưu vào bộ nhớ tạm.",
     });
   };
 
@@ -74,8 +74,8 @@ export default function SettingsPage() {
   return (
     <div className="max-w-4xl space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
-        <h2 className="text-3xl font-headline font-bold text-primary">Cài đặt hệ thống</h2>
-        <p className="text-muted-foreground">Cấu hình cách PayMailHook giao tiếp với Website WordPress của bạn.</p>
+        <h2 className="text-3xl font-headline font-bold text-primary">Cài đặt kết nối Merchant</h2>
+        <p className="text-muted-foreground">Cấu hình cách PayMailHook giao tiếp với Website hoặc Ứng dụng của bạn.</p>
       </div>
 
       <div className="grid gap-6">
@@ -83,29 +83,29 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="w-5 h-5 text-accent" />
-              Kết nối WordPress Webhook
+              Cấu hình Webhook Endpoint
             </CardTitle>
             <CardDescription>
-              Nhập đường dẫn API trên WordPress để chúng tôi gửi mã đối soát TTxxxxxx về.
+              Nhập đường dẫn API (Webhook) trên hệ thống của bạn để chúng tôi gửi mã đối soát giao dịch về.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="webhook-url">URL Webhook nhận dữ liệu (WordPress API)</Label>
+              <Label htmlFor="webhook-url">URL Webhook nhận dữ liệu (Endpoint)</Label>
               <Input 
                 id="webhook-url" 
-                placeholder="https://..." 
+                placeholder="https://your-domain.com/api/payment-webhook" 
                 value={webhookUrl}
                 onChange={(e) => setWebhookUrl(e.target.value)}
                 className="font-mono text-sm"
               />
               <p className="text-xs text-muted-foreground italic">
-                Ví dụ: https://domain-cua-ban.com/wp-json/paymail/v1/confirm
+                Hệ thống sẽ gửi yêu cầu POST JSON kèm theo mã tham chiếu giao dịch.
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="secret-key">Secret Key (Mã bí mật)</Label>
+              <Label htmlFor="secret-key">Secret Key (Xác thực bảo mật)</Label>
               <div className="flex gap-2">
                 <Input 
                   id="secret-key" 
@@ -118,7 +118,7 @@ export default function SettingsPage() {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Sử dụng mã này trên WordPress để xác thực dữ liệu gửi từ PayMailHook.
+                Sử dụng mã này để xác minh tính toàn vẹn của dữ liệu gửi từ PayMailHook.
               </p>
             </div>
           </CardContent>
@@ -129,27 +129,54 @@ export default function SettingsPage() {
           </CardFooter>
         </Card>
 
-        <Card className="border-none shadow-md bg-secondary/30">
+        <Card className="border-none shadow-md">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <FileCode className="w-5 h-5" /> 
-              Hướng dẫn cho WordPress
+              <Code2 className="w-5 h-5 text-accent" /> 
+              Hướng dẫn tích hợp
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-sm space-y-4">
-            <p>Để website WordPress có thể hiểu được mã <b>TTxxxxxx</b> và tự động duyệt đơn hàng, bạn hãy làm theo các bước:</p>
-            <div className="flex gap-4">
-              <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center font-bold text-primary shrink-0 shadow-sm">1</div>
-              <p className="pt-1">Mở file <code>docs/wordpress-integration-sample.php</code> để copy đoạn mã mẫu.</p>
-            </div>
-            <div className="flex gap-4">
-              <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center font-bold text-primary shrink-0 shadow-sm">2</div>
-              <p className="pt-1">Dán đoạn mã đó vào file <b>functions.php</b> của Theme trên WordPress.</p>
-            </div>
-            <div className="flex gap-4">
-              <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center font-bold text-primary shrink-0 shadow-sm">3</div>
-              <p className="pt-1">Thay thế <code>Secret Key</code> trong PHP bằng mã bạn vừa sao chép ở trên.</p>
-            </div>
+          <CardContent>
+            <Tabs defaultValue="wordpress" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="wordpress" className="font-bold flex gap-2">
+                  <Globe className="w-4 h-4" /> WordPress
+                </TabsTrigger>
+                <TabsTrigger value="custom" className="font-bold flex gap-2">
+                  <FileCode className="w-4 h-4" /> Website khác
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="wordpress" className="space-y-4 text-sm">
+                <p>Để WordPress tự động duyệt đơn hàng, hãy làm theo các bước:</p>
+                <div className="flex gap-4">
+                  <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs shrink-0">1</div>
+                  <p>Mở file <code>docs/wordpress-integration-sample.php</code> trong bộ mã nguồn này.</p>
+                </div>
+                <div className="flex gap-4">
+                  <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs shrink-0">2</div>
+                  <p>Dán vào file <b>functions.php</b> của Theme hoặc dùng Plugin <b>Code Snippets</b>.</p>
+                </div>
+                <div className="flex gap-4">
+                  <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs shrink-0">3</div>
+                  <p>Thay thế <code>Secret Key</code> bằng mã bạn vừa sao chép ở trên.</p>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="custom" className="space-y-4 text-sm">
+                <p>Đối với Website tùy chỉnh, bạn cần viết một hàm đón yêu cầu <b>POST</b> với dữ liệu JSON:</p>
+                <div className="bg-slate-900 text-green-400 p-4 rounded-lg font-mono text-[11px] overflow-x-auto">
+{`{
+  "amount": 500000,
+  "referenceCode": "TT123456",
+  "senderName": "NGUYEN VAN A",
+  "secretKey": "${secretKey || 'YOUR_KEY'}",
+  "timestamp": "2024-03-20T10:30:00Z"
+}`}
+                </div>
+                <p className="text-muted-foreground italic">Gợi ý: Kiểm tra mã "referenceCode" để biết đơn hàng nào cần được xác nhận thành công.</p>
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       </div>
