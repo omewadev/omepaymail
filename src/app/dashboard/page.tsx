@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button";
 import { AlertTriangle, ArrowRight, Mail, Cpu, Globe, Zap, CheckCircle2 } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
 import Link from "next/link";
-import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
-import { doc } from "firebase/firestore";
+import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from "@/firebase";
+import { doc, collection, query, limit } from "firebase/firestore";
 
 const data = [
   { name: 'T2', total: 400 },
@@ -30,14 +30,22 @@ export default function OverviewPage() {
     return doc(firestore, "users", user.uid);
   }, [firestore, user?.uid]);
 
-  const { data: profile, isLoading } = useDoc(userProfileRef);
+  const { data: profile, isLoading: profileLoading } = useDoc(userProfileRef);
+
+  const webhooksQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return query(collection(firestore, "users", user.uid, "webhookConfigurations"), limit(1));
+  }, [firestore, user?.uid]);
+
+  const { data: webhooks } = useCollection(webhooksQuery);
+  const prefix = webhooks?.[0]?.referencePrefix || "TT";
 
   const usageCount = profile?.transactionCount || 0;
-  const limit = profile?.transactionLimit || 100;
-  const usagePercent = Math.round((usageCount / limit) * 100);
+  const limitCount = profile?.transactionLimit || 100;
+  const usagePercent = Math.round((usageCount / limitCount) * 100);
   const isWarning = usagePercent >= 80;
 
-  if (isLoading) return <div className="p-8">Đang tải dữ liệu...</div>;
+  if (profileLoading) return <div className="p-8">Đang tải dữ liệu...</div>;
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -50,7 +58,7 @@ export default function OverviewPage() {
             </div>
             <div>
               <p className="font-bold text-lg">Cảnh báo: Sắp hết hạn mức giao dịch!</p>
-              <p className="text-sm opacity-80">Bạn đã sử dụng {usagePercent}% gói cước. Hãy nâng cấp để tránh gián đoạn xác nhận đơn hàng WordPress.</p>
+              <p className="text-sm opacity-80">Bạn đã sử dụng {usagePercent}% gói cước. Hãy nâng cấp để tránh gián đoạn xác nhận đơn hàng của bạn.</p>
             </div>
           </div>
           <Button asChild size="lg" className="bg-amber-600 hover:bg-amber-700 text-white shadow-lg">
@@ -61,14 +69,14 @@ export default function OverviewPage() {
         </div>
       )}
 
-      {/* Sơ đồ luồng hoạt động (Visualizing how they work together) */}
+      {/* Sơ đồ luồng hoạt động */}
       <Card className="border-none shadow-sm bg-slate-50 overflow-hidden">
         <CardHeader className="pb-2">
           <CardTitle className="text-lg flex items-center gap-2">
             <Zap className="w-5 h-5 text-accent" />
-            Quy trình tự động hóa của bạn
+            Quy trình tự động hóa động
           </CardTitle>
-          <CardDescription>Cách PayMailHook kết nối Ngân hàng với Website của bạn</CardDescription>
+          <CardDescription>Hệ thống đang tìm kiếm mã bắt đầu bằng: <Badge variant="outline" className="text-accent border-accent ml-1">{prefix}</Badge></CardDescription>
         </CardHeader>
         <CardContent className="pt-4">
           <div className="grid grid-cols-1 md:grid-cols-7 gap-4 items-center">
@@ -101,7 +109,7 @@ export default function OverviewPage() {
               <div className="w-16 h-16 rounded-2xl bg-accent text-white shadow-lg flex items-center justify-center animate-pulse">
                 <Cpu className="w-8 h-8" />
               </div>
-              <span className="text-[10px] font-bold uppercase text-accent">AI (TTxxxxxx)</span>
+              <span className="text-[10px] font-bold uppercase text-accent">AI ({prefix}xxxxxx)</span>
               <Badge className="absolute -top-2 -right-2 bg-green-500 text-[8px]">Real-time</Badge>
             </div>
 
@@ -128,14 +136,14 @@ export default function OverviewPage() {
             <CardTitle className="text-2xl font-bold uppercase">{profile?.planName || "Free"}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-[10px] text-white/50">Hạn mức tối đa: {limit.toLocaleString()}</p>
+            <p className="text-[10px] text-white/50">Hạn mức tối đa: {limitCount.toLocaleString()}</p>
           </CardContent>
         </Card>
 
         <Card className="border-none shadow-md">
           <CardHeader className="pb-2">
             <CardDescription className="text-xs">Giao dịch / Hạn mức</CardDescription>
-            <CardTitle className="text-2xl font-bold">{usageCount.toLocaleString()} / {limit.toLocaleString()}</CardTitle>
+            <CardTitle className="text-2xl font-bold">{usageCount.toLocaleString()} / {limitCount.toLocaleString()}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             <Progress value={usagePercent} className={`h-2 ${isWarning ? 'bg-amber-100' : 'bg-muted'}`} />
