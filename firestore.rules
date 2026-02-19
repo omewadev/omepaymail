@@ -13,7 +13,7 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow get, create, update: if isOwner(userId);
-      allow list: if false; // Chỉ Admin mới được list, nhưng ở đây dùng quy tắc đơn giản cho MVP
+      allow list: if false; 
 
       match /paymentGatewayConfigurations/{configId} {
         allow read, write: if isOwner(userId);

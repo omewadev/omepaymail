@@ -95,39 +95,21 @@
     "providers": ["password", "google.com"]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "userProfile",
-          "schema": { "$ref": "#/backend/entities/UserProfile" },
-          "description": "Thông tin hồ sơ và hạn mức của người dùng."
-        }
-      },
-      {
-        "path": "/users/{userId}/paymentGatewayConfigurations/{id}",
-        "definition": {
-          "entityName": "paymentGatewayConfiguration",
-          "schema": { "$ref": "#/backend/entities/PaymentGatewayConfiguration" },
-          "description": "Cấu hình cổng thanh toán cá nhân."
-        }
-      },
-      {
-        "path": "/users/{userId}/gmailListenerConfigurations/{id}",
-        "definition": {
-          "entityName": "gmailListenerConfiguration",
-          "schema": { "$ref": "#/backend/entities/GmailListenerConfiguration" },
-          "description": "Cấu hình Gmail Listener cá nhân."
-        }
-      },
-      {
-        "path": "/users/{userId}/webhookConfigurations/{id}",
-        "definition": {
-          "entityName": "webhookConfiguration",
-          "schema": { "$ref": "#/backend/entities/WebhookConfiguration" },
-          "description": "Cấu hình Webhook cá nhân gửi về WordPress."
-        }
-      }
-    ]
+    "/users/{userId}": {
+      "schema": { "$ref": "#/backend/entities/UserProfile" },
+      "description": "Thông tin hồ sơ và hạn mức của người dùng."
+    },
+    "/users/{userId}/paymentGatewayConfigurations/{id}": {
+      "schema": { "$ref": "#/backend/entities/PaymentGatewayConfiguration" },
+      "description": "Cấu hình cổng thanh toán cá nhân."
+    },
+    "/users/{userId}/gmailListenerConfigurations/{id}": {
+      "schema": { "$ref": "#/backend/entities/GmailListenerConfiguration" },
+      "description": "Cấu hình Gmail Listener cá nhân."
+    },
+    "/users/{userId}/webhookConfigurations/{id}": {
+      "schema": { "$ref": "#/backend/entities/WebhookConfiguration" },
+      "description": "Cấu hình Webhook cá nhân gửi về WordPress."
+    }
   }
 }
