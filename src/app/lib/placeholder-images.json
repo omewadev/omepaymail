@@ -1,0 +1,16 @@
+{
+  "placeholderImages": [
+    {
+      "id": "hero-dashboard",
+      "description": "Financial dashboard visualization",
+      "imageUrl": "https://picsum.photos/seed/paymail1/1200/800",
+      "imageHint": "finance dashboard"
+    },
+    {
+      "id": "bank-notification",
+      "description": "Email notification illustration",
+      "imageUrl": "https://picsum.photos/seed/paymail2/400/300",
+      "imageHint": "email notification"
+    }
+  ]
+}
