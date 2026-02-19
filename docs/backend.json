@@ -1,31 +1,44 @@
 
 {
   "entities": {
-    "UserConfig": {
-      "title": "User Configuration",
-      "description": "Stores user-specific settings like Webhook URL and Gmail connection status.",
+    "UserAccount": {
+      "title": "User Account & Subscription",
+      "description": "Quản lý thông tin tài khoản, hạn mức và gói cước của người dùng.",
       "type": "object",
       "properties": {
-        "userId": { "type": "string", "description": "The unique ID of the user." },
-        "webhookUrl": { "type": "string", "format": "uri", "description": "The URL to send webhook notifications to." },
-        "secretKey": { "type": "string", "description": "A secret key used to sign webhook payloads." },
-        "gmailConnected": { "type": "boolean", "description": "Whether the user has connected their Gmail account." },
-        "lastHistoryId": { "type": "string", "description": "Used to track the last processed email to avoid duplicates." },
-        "updatedAt": { "type": "string", "format": "date-time" }
+        "userId": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "planName": { "type": "string", "enum": ["Free", "Pro", "Enterprise"] },
+        "transactionLimit": { "type": "number", "description": "Hạn mức giao dịch tối đa trong tháng." },
+        "transactionUsed": { "type": "number", "description": "Số giao dịch đã thực hiện trong tháng." },
+        "status": { "type": "string", "enum": ["active", "suspended", "warning"] },
+        "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["userId", "webhookUrl"]
+      "required": ["userId", "email", "transactionLimit"]
+    },
+    "UserConfig": {
+      "title": "User Configuration",
+      "description": "Cấu hình kỹ thuật của người dùng.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "webhookUrl": { "type": "string", "format": "uri" },
+        "secretKey": { "type": "string" },
+        "gmailConnected": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
     },
     "TransactionLog": {
       "title": "Transaction Log",
-      "description": "Records of processed transactions and webhook delivery status.",
+      "description": "Nhật ký giao dịch chi tiết.",
       "type": "object",
       "properties": {
         "userId": { "type": "string" },
         "amount": { "type": "number" },
         "referenceCode": { "type": "string" },
         "senderName": { "type": "string" },
-        "status": { "type": "string", "enum": ["success", "failed", "pending"] },
-        "webhookResponse": { "type": "string", "description": "Response received from the WordPress site." },
+        "status": { "type": "string", "enum": ["success", "failed", "limit_exceeded"] },
         "timestamp": { "type": "string", "format": "date-time" }
       }
     }
@@ -34,13 +47,17 @@
     "providers": ["google.com"]
   },
   "firestore": {
+    "/accounts/{userId}": {
+      "schema": "UserAccount",
+      "description": "Thông tin quản trị và hạn mức của người dùng."
+    },
     "/userConfigs/{userId}": {
       "schema": "UserConfig",
-      "description": "User specific configurations."
+      "description": "Cấu hình Webhook và Gmail."
     },
     "/logs/{logId}": {
       "schema": "TransactionLog",
-      "description": "Historical logs of all processed transactions."
+      "description": "Lịch sử giao dịch toàn hệ thống."
     }
   }
 }
