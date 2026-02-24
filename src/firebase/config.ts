@@ -1,8 +1,9 @@
 export const firebaseConfig = {
-  "projectId": "studio-3732670026-90afd",
-  "appId": "1:894160816932:web:d6605b7a882793dc50c1b1",
-  "apiKey": "AIzaSyAYdmjK_nIrg98IGggcbihAKVi6GsMsarY",
-  "authDomain": "studio-3732670026-90afd.firebaseapp.com",
-  "measurementId": "",
-  "messagingSenderId": "894160816932"
+  apiKey: "AIzaSyDPIhTroG36OTE2v_gqvnG_rEVpfXLCMA0",
+  authDomain: "omepaymail.firebaseapp.com",
+  projectId: "omepaymail",
+  storageBucket: "omepaymail.firebasestorage.app",
+  messagingSenderId: "1087122833652",
+  appId: "1:1087122833652:web:af96319441d2aed5d89ea1",
+  measurementId: "G-T2C6DBP50S"
 };
