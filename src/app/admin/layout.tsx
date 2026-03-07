@@ -2,7 +2,7 @@
 "use client";
 
 import { SidebarProvider, SidebarInset, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarGroup, SidebarGroupLabel, SidebarFooter } from "@/components/ui/sidebar";
-import { ShieldCheck, Users, BarChart3, Settings, LogOut, Globe, Bell, FileCode } from "lucide-react";
+import { ShieldCheck, Users, BarChart3, Globe, Bell, FileCode } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";

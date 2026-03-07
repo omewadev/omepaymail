@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Download, Cpu, ShieldCheck, Database, Zap, ArrowRight, Share2 } from "lucide-react";
+import { FileText, Download, Cpu, ShieldCheck, Database, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const README_CONTENT = `# PayMailHook - Hệ thống Xác thực Thanh toán Tự động qua Gmail & AI
@@ -65,7 +65,7 @@ export default function SystemDocsPage() {
         title: "Tải về thành công",
         description: "Tệp README.md đã được lưu vào máy tính của bạn.",
       });
-    } catch (error) {
+    } catch {
       toast({
         variant: "destructive",
         title: "Lỗi",
@@ -131,9 +131,9 @@ export default function SystemDocsPage() {
                 </h3>
                 <p>Dữ liệu được tổ chức theo cấu trúc phân cấp (Sub-collections):</p>
                 <ul className="list-disc pl-6 space-y-2">
-                  <li><code>/users/{`{uid}`}</code>: Thông tin gói cước và hạn mức của User.</li>
-                  <li><code>/users/{`{uid}`}/webhookConfigurations</code>: Cấu hình Webhook riêng biệt cho từng website.</li>
-                  <li><code>/users/{`{uid}`}/gmailListenerConfigurations</code>: Quản lý Token OAuth của Google.</li>
+                  <li><code>/users/{'{uid}'}</code>: Thông tin gói cước và hạn mức của User.</li>
+                  <li><code>/users/{'{uid}'}/webhookConfigurations</code>: Cấu hình Webhook riêng biệt cho từng website.</li>
+                  <li><code>/users/{'{uid}'}/gmailListenerConfigurations</code>: Quản lý Token OAuth của Google.</li>
                 </ul>
               </section>
             </div>
@@ -166,7 +166,7 @@ export default function SystemDocsPage() {
               <CardTitle className="text-md">Lưu ý Vận hành</CardTitle>
             </CardHeader>
             <CardContent className="text-xs opacity-90 leading-relaxed">
-              Hệ thống được thiết kế dưới dạng SaaS. Admin cần theo dõi trang "Cảnh báo cước" hàng ngày để nhắc nhở những người dùng sắp hết hạn mức thực hiện thanh toán, đảm bảo luồng doanh thu ổn định cho dịch vụ.
+              Hệ thống được thiết kế dưới dạng SaaS. Admin cần theo dõi trang &quot;Cảnh báo cước&quot; hàng ngày để nhắc nhở những người dùng sắp hết hạn mức thực hiện thanh toán, đảm bảo luồng doanh thu ổn định cho dịch vụ.
             </CardContent>
           </Card>
         </div>

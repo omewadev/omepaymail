@@ -1,11 +1,10 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Webhook, Plus, Trash2, Send, ExternalLink, Shield, Info, Copy, Terminal } from "lucide-react";
+import { Plus, Trash2, Send, ExternalLink, Shield, Info, Copy, Terminal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";

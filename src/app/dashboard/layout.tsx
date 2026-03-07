@@ -1,6 +1,6 @@
 
 import { SidebarProvider, SidebarInset, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarGroup, SidebarGroupLabel, SidebarFooter } from "@/components/ui/sidebar";
-import { LayoutDashboard, Webhook, Settings, History, Mail, LogOut, CreditCard } from "lucide-react";
+import { LayoutDashboard, Webhook, Settings, Mail, LogOut, CreditCard } from "lucide-react";
 import Link from "next/link";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 

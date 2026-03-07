@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,13 +11,18 @@ import { useUser, useFirestore, useCollection, useMemoFirebase, updateDocumentNo
 import { collection, query, limit, doc } from "firebase/firestore";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+interface FormState {
+  webhookUrl: string;
+  secretKey: string;
+  referencePrefix: string;
+  id: string | null;
+}
+
 export default function SettingsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
-  const [webhookUrl, setWebhookUrl] = useState("");
-  const [secretKey, setSecretKey] = useState("");
-  const [referencePrefix, setReferencePrefix] = useState("TT");
+  const[formState, setFormState] = useState<FormState | null>(null);
 
   const webhooksQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
@@ -28,27 +32,44 @@ export default function SettingsPage() {
   const { data: webhooks, isLoading } = useCollection(webhooksQuery);
 
   useEffect(() => {
-    if (webhooks && webhooks.length > 0) {
-      setWebhookUrl(webhooks[0].targetUrl || "");
-      setSecretKey(webhooks[0].secretToken || "");
-      setReferencePrefix(webhooks[0].referencePrefix || "TT");
-    } else if (user?.uid && !isLoading && (!webhooks || webhooks.length === 0)) {
-      setSecretKey(`pmh_live_${Math.random().toString(36).substring(7)}`);
+    if (formState === null && !isLoading && webhooks) {
+      setTimeout(() => {
+        const initialData = webhooks[0];
+        if (initialData) {
+          setFormState({
+            webhookUrl: initialData.targetUrl || "",
+            secretKey: initialData.secretToken || "",
+            referencePrefix: initialData.referencePrefix || "TT",
+            id: initialData.id
+          });
+        } else if (user?.uid) {
+          setFormState({
+            webhookUrl: "",
+            secretKey: `pmh_live_${Math.random().toString(36).substring(7)}`,
+            referencePrefix: "TT",
+            id: null
+          });
+        }
+      }, 0);
     }
-  }, [webhooks, user?.uid, isLoading]);
+  },[formState, isLoading, webhooks, user]);
+
+  const handleFieldChange = (field: keyof FormState, value: string) => {
+    setFormState(prevState => prevState ? { ...prevState, [field]: value } : null);
+  };
 
   const handleSave = () => {
-    if (!firestore || !user?.uid) return;
+    if (!firestore || !user?.uid || !formState) return;
 
     const data = {
-      targetUrl: webhookUrl,
-      secretToken: secretKey,
-      referencePrefix: referencePrefix.toUpperCase().trim(),
+      targetUrl: formState.webhookUrl,
+      secretToken: formState.secretKey,
+      referencePrefix: formState.referencePrefix.toUpperCase().trim(),
       updatedAt: new Date().toISOString()
     };
 
-    if (webhooks && webhooks.length > 0) {
-      const ref = doc(firestore, "users", user.uid, "webhookConfigurations", webhooks[0].id);
+    if (formState.id) {
+      const ref = doc(firestore, "users", user.uid, "webhookConfigurations", formState.id);
       updateDocumentNonBlocking(ref, data);
     } else {
       const colRef = collection(firestore, "users", user.uid, "webhookConfigurations");
@@ -62,7 +83,7 @@ export default function SettingsPage() {
 
     toast({
       title: "Đã lưu cấu hình",
-      description: "Hệ thống của bạn giờ đã có thể nhận dữ liệu với tiền tố mã " + referencePrefix,
+      description: "Hệ thống của bạn giờ đã có thể nhận dữ liệu với tiền tố mã " + formState.referencePrefix,
     });
   };
 
@@ -74,7 +95,7 @@ export default function SettingsPage() {
     });
   };
 
-  if (isLoading) return <div className="p-8 text-center">Đang tải cấu hình...</div>;
+  if (isLoading || !formState) return <div className="p-8 text-center">Đang tải cấu hình...</div>;
 
   return (
     <div className="max-w-4xl space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -103,12 +124,12 @@ export default function SettingsPage() {
                 <Input 
                   id="ref-prefix" 
                   placeholder="Ví dụ: TT, CG, DH, BILL" 
-                  value={referencePrefix}
-                  onChange={(e) => setReferencePrefix(e.target.value)}
+                  value={formState.referencePrefix}
+                  onChange={(e) => handleFieldChange('referencePrefix', e.target.value)}
                   className="font-bold uppercase"
                 />
                 <p className="text-[10px] text-muted-foreground">
-                  AI sẽ tìm kiếm nội dung chuyển khoản bắt đầu bằng mã này (VD: <b>{referencePrefix}</b>123456).
+                  AI sẽ tìm kiếm nội dung chuyển khoản bắt đầu bằng mã này (VD: <b>{formState.referencePrefix}</b>123456).
                 </p>
               </div>
 
@@ -118,10 +139,10 @@ export default function SettingsPage() {
                   <Input 
                     id="secret-key" 
                     readOnly 
-                    value={secretKey}
+                    value={formState.secretKey}
                     className="bg-muted font-mono"
                   />
-                  <Button variant="outline" size="icon" onClick={() => copyToClipboard(secretKey)}>
+                  <Button variant="outline" size="icon" onClick={() => copyToClipboard(formState.secretKey)}>
                     <Copy className="w-4 h-4" />
                   </Button>
                 </div>
@@ -133,8 +154,8 @@ export default function SettingsPage() {
               <Input 
                 id="webhook-url" 
                 placeholder="https://your-domain.com/api/payment-webhook" 
-                value={webhookUrl}
-                onChange={(e) => setWebhookUrl(e.target.value)}
+                value={formState.webhookUrl}
+                onChange={(e) => handleFieldChange('webhookUrl', e.target.value)}
                 className="font-mono text-sm"
               />
             </div>
@@ -167,21 +188,22 @@ export default function SettingsPage() {
               <TabsContent value="wordpress" className="space-y-4 text-sm">
                 <p>Để WordPress tự động duyệt đơn hàng, hãy thay mã <code>TT</code> trong code bằng tiền tố của bạn:</p>
                 <div className="p-3 bg-slate-50 rounded border font-mono text-xs">
-                  $referenceCode = $params['referenceCode'] ?? ''; <br/>
-                  $order_id = str_replace('<b>{referencePrefix}</b>', '', $referenceCode);
+                  {`$referenceCode = $params['referenceCode'] ?? '';`}
+                  <br />
+                  {`$order_id = str_replace('`}<b>{formState.referencePrefix}</b>{`', '', $referenceCode);`}
                 </div>
               </TabsContent>
 
               <TabsContent value="custom" className="space-y-4 text-sm">
-                <p>Dữ liệu JSON mẫu mà website bạn sẽ nhận được:</p>
-                <div className="bg-slate-900 text-green-400 p-4 rounded-lg font-mono text-[11px] overflow-x-auto">
+                <p>Dữ liệu JSON mẫu mà website của bạn sẽ nhận được:</p>
+                <pre className="bg-slate-900 text-green-400 p-4 rounded-lg font-mono text-[11px] overflow-x-auto">
 {`{
   "amount": 500000,
-  "referenceCode": "${referencePrefix}123456",
-  "secretKey": "${secretKey || 'YOUR_KEY'}",
+  "referenceCode": "${formState.referencePrefix}123456",
+  "secretKey": "${formState.secretKey || 'YOUR_KEY'}",
   "timestamp": "2024-03-20T10:30:00Z"
 }`}
-                </div>
+                </pre>
               </TabsContent>
             </Tabs>
           </CardContent>

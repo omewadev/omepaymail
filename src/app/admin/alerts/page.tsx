@@ -14,13 +14,22 @@ import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection } from "firebase/firestore";
 import { Input } from "@/components/ui/input";
 
+interface User {
+  id: string;
+  displayName?: string;
+  email?: string;
+  transactionCount?: number;
+  transactionLimit?: number;
+  planName?: string;
+}
+
 export default function AdminAlertsPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [preview, setPreview] = useState<{ open: boolean; data: NotificationOutput | null; userId: string | null }>({ 
-    open: false, 
+  const [preview, setPreview] = useState<{ open: boolean; data: NotificationOutput | null; userId: string | null }>({
+    open: false,
     data: null,
     userId: null
   });
@@ -39,13 +48,13 @@ export default function AdminAlertsPage() {
       const usage = u.transactionCount || 0;
       const limit = u.transactionLimit || 1;
       const percent = (usage / limit) * 100;
-      const matchesSearch = u.email?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      const matchesSearch = u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             u.displayName?.toLowerCase().includes(searchTerm.toLowerCase());
       return percent >= 80 && matchesSearch;
     });
   }, [users, searchTerm]);
 
-  const handleGenerateAlert = async (alert: any) => {
+  const handleGenerateAlert = async (alert: User) => {
     setLoadingId(alert.id);
     try {
       const result = await generateNotification({
@@ -56,7 +65,7 @@ export default function AdminAlertsPage() {
         paymentLink: window.location.origin + "/dashboard/billing"
       });
       setPreview({ open: true, data: result, userId: alert.id });
-    } catch (error) {
+    } catch {
       toast({
         variant: "destructive",
         title: "Lỗi AI",
@@ -94,9 +103,9 @@ export default function AdminAlertsPage() {
           <CardTitle>Danh sách cần xử lý ({criticalUsers.length})</CardTitle>
           <div className="relative w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input 
-              className="pl-9" 
-              placeholder="Tìm user..." 
+            <Input
+              className="pl-9"
+              placeholder="Tìm user..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -118,7 +127,7 @@ export default function AdminAlertsPage() {
                   const usage = user.transactionCount || 0;
                   const limit = user.transactionLimit || 100;
                   const percent = Math.round((usage / limit) * 100);
-                  
+
                   return (
                     <TableRow key={user.id}>
                       <TableCell>
@@ -135,11 +144,11 @@ export default function AdminAlertsPage() {
                       </TableCell>
                       <TableCell><Badge variant="secondary">{user.planName}</Badge></TableCell>
                       <TableCell className="text-right">
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
+                        <Button
+                          size="sm"
+                          variant="outline"
                           className="text-accent border-accent hover:bg-accent hover:text-white"
-                          onClick={() => handleGenerateAlert(user)}
+                          onClick={() => handleGenerateAlert(user as User)}
                           disabled={loadingId === user.id}
                         >
                           {loadingId === user.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3 mr-1" />}

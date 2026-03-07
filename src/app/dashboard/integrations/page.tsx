@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Mail, RefreshCw, ShieldCheck, Zap, CheckCircle2, Globe, AlertCircle, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { collection, query, limit, doc } from "firebase/firestore";
@@ -114,7 +113,7 @@ export default function IntegrationsPage() {
                 <div className="flex gap-4 group">
                   <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center shrink-0 font-bold group-hover:scale-110 transition-transform">1</div>
                   <div>
-                    <p className="font-bold">Bấm nút "Kết nối với Google"</p>
+                    <p className="font-bold">Bấm nút &quot;Kết nối với Google&quot;</p>
                     <p className="text-sm text-muted-foreground">Bạn sẽ được chuyển sang trang <code>accounts.google.com</code> của Google.</p>
                   </div>
                 </div>

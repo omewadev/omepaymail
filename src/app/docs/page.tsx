@@ -1,7 +1,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, FileCode, Globe, Copy, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, FileCode, Globe } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -47,7 +47,7 @@ export default function PublicDocsPage() {
                 <div className="p-4 bg-white rounded-lg border text-center space-y-2">
                   <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center mx-auto font-bold">2</div>
                   <p className="text-sm font-bold">Trích xuất Dữ liệu</p>
-                  <p className="text-xs text-muted-foreground">AI bóc tách Số tiền & Mã tham chiếu đơn hàng.</p>
+                  <p className="text-xs text-muted-foreground">AI bóc tách Số tiền &amp; Mã tham chiếu đơn hàng.</p>
                 </div>
                 <div className="p-4 bg-white rounded-lg border text-center space-y-2">
                   <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center mx-auto font-bold">3</div>
@@ -74,8 +74,8 @@ export default function PublicDocsPage() {
                 <Card className="border-none shadow-sm">
                   <CardContent className="pt-6 space-y-4">
                     <p className="text-sm leading-relaxed">
-                      Dán đoạn mã dưới đây vào file <code>functions.php</code> của theme hoặc dùng plugin "Code Snippets". 
-                      Đoạn mã này sẽ tạo một Endpoint nhận dữ liệu từ PayMailHook và tự động đổi trạng thái đơn hàng sang "Đã hoàn thành".
+                      Dán đoạn mã dưới đây vào file <code>functions.php</code> của theme hoặc dùng plugin &quot;Code Snippets&quot;. 
+                      Đoạn mã này sẽ tạo một Endpoint nhận dữ liệu từ PayMailHook và tự động đổi trạng thái đơn hàng sang &quot;Đã hoàn thành&quot;.
                     </p>
                     <div className="bg-slate-900 text-green-400 p-6 rounded-xl font-mono text-xs overflow-x-auto">
                       <pre>
@@ -160,7 +160,7 @@ function handle_paymail_webhook($request) {
   );
 }
 
-function ArrowRight(props: any) {
+function ArrowRight(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}
