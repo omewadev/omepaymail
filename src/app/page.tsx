@@ -2,19 +2,62 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Mail, Zap, ArrowRight, Globe, FileCode } from 'lucide-react';
+import { Mail, Zap, ArrowRight, Globe, FileCode, Loader2 } from 'lucide-react';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
-import { useUser } from '@/firebase/provider'; 
+import { useFirebase } from '@/firebase/provider'; 
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
-// This is the main landing page of the application.
-// It uses the 'use client' directive to allow for client-side interactions
-// and access to hooks like `useUser`.
 export default function Home() {
-  const { user, isUserLoading } = useUser(); // Get user and loading state
+  const { auth, firestore, user, isUserLoading } = useFirebase();
+  const router = useRouter();
+  const { toast } = useToast();
+  const[isLoggingIn, setIsLoggingIn] = useState(false);
+
+  const handleGoogleLogin = async () => {
+    if (!auth || !firestore) {
+      toast({ variant: "destructive", title: "Lỗi hệ thống", description: "Firebase chưa sẵn sàng." });
+      return;
+    }
+    
+    setIsLoggingIn(true);
+    const provider = new GoogleAuthProvider();
+    
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const loggedInUser = result.user;
+
+      // Kiểm tra xem user đã có trong Database chưa, nếu chưa thì tạo mới
+      const userRef = doc(firestore, 'users', loggedInUser.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        await setDoc(userRef, {
+          id: loggedInUser.uid,
+          email: loggedInUser.email,
+          displayName: loggedInUser.displayName || '',
+          planName: 'Free',
+          transactionLimit: 100,
+          transactionCount: 0,
+          createdAt: new Date().toISOString()
+        });
+      }
+
+      toast({ title: "Đăng nhập thành công!" });
+      router.push('/dashboard');
+    } catch (error: any) {
+      console.error("Login error:", error);
+      toast({ variant: "destructive", title: "Đăng nhập thất bại", description: error.message });
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Navigation */}
       <nav className="h-20 border-b border-border px-8 flex items-center justify-between max-w-7xl mx-auto">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-[#293462] flex items-center justify-center text-white font-bold text-xl">P</div>
@@ -22,16 +65,20 @@ export default function Home() {
         </div>
         <div className="flex items-center gap-6">
           <LanguageSwitcher />
-          {/* Conditional rendering based on user authentication state */}
-          {!isUserLoading && !user && (
+          
+          {isUserLoading ? (
+            <Loader2 className="w-5 h-5 animate-spin text-[#293462]" />
+          ) : !user ? (
             <>
-              <Link href="/dashboard" className="text-sm font-medium hover:text-[#6F2DBD] transition-colors">Đăng nhập</Link>
-              <Button asChild style={{ backgroundColor: '#6F2DBD', color: 'white' }}>
-                <Link href="/dashboard">Đăng ký</Link>
+              <button onClick={handleGoogleLogin} className="text-sm font-medium hover:text-[#6F2DBD] transition-colors">
+                Đăng nhập
+              </button>
+              <Button onClick={handleGoogleLogin} disabled={isLoggingIn} style={{ backgroundColor: '#6F2DBD', color: 'white' }}>
+                {isLoggingIn ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Đăng ký
               </Button>
             </>
-          )}
-          {!isUserLoading && user && (
+          ) : (
             <Button asChild style={{ backgroundColor: '#293462', color: 'white' }}>
               <Link href="/dashboard">Vào Dashboard</Link>
             </Button>
@@ -39,7 +86,6 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* Hero Section */}
       <section className="py-24 px-8 max-w-7xl mx-auto text-center">
         <h1 className="text-5xl md:text-7xl font-headline font-extrabold text-[#293462] mb-6 tracking-tight">
           Cổng thanh toán tự động qua <span style={{ color: '#6F2DBD' }}>Gmail</span>
@@ -48,20 +94,22 @@ export default function Home() {
           Cầu nối giữa thông báo ngân hàng và website của bạn. Tự động hóa duyệt đơn hàng cho WordPress và mọi nền tảng Web khác chỉ trong vài phút.
         </p>
         <div className="flex items-center justify-center gap-4">
-          <Button size="lg" asChild className="px-8 h-14 text-lg" style={{ backgroundColor: '#293462', color: 'white' }}>
-            <Link href="/dashboard">
+          {user ? (
+            <Button size="lg" asChild className="px-8 h-14 text-lg" style={{ backgroundColor: '#293462', color: 'white' }}>
+              <Link href="/dashboard">Bắt đầu ngay <ArrowRight className="ml-2 w-5 h-5" /></Link>
+            </Button>
+          ) : (
+            <Button size="lg" onClick={handleGoogleLogin} disabled={isLoggingIn} className="px-8 h-14 text-lg" style={{ backgroundColor: '#293462', color: 'white' }}>
+              {isLoggingIn ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
               Bắt đầu ngay <ArrowRight className="ml-2 w-5 h-5" />
-            </Link>
-          </Button>
+            </Button>
+          )}
           <Button variant="outline" size="lg" className="px-8 h-14 text-lg border-[#293462] text-[#293462] hover:bg-opacity-5 hover:bg-[#293462]" asChild>
-            <Link href="/docs">
-              <FileCode className="mr-2 w-5 h-5" /> Xem Tài liệu
-            </Link>
+            <Link href="/docs"><FileCode className="mr-2 w-5 h-5" /> Xem Tài liệu</Link>
           </Button>
         </div>
       </section>
 
-      {/* Features Section */}
       <section className="py-20 bg-background/50">
         <div className="max-w-7xl mx-auto px-8 grid md:grid-cols-3 gap-12">
           <div className="bg-white p-8 rounded-2xl shadow-sm border border-border">
@@ -88,9 +136,8 @@ export default function Home() {
         </div>
       </section>
       
-      {/* Footer */}
       <footer className="py-12 border-t border-border mt-20 text-center text-muted-foreground">
-        <p>© 2024 PayMailHook Inc. Tốc độ - Bảo mật - Tin cậy.</p>
+        <p>© 2026 PayMailHook Inc. Tốc độ - Bảo mật - Tin cậy.</p>
       </footer>
     </div>
   );

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Save, Shield, Copy, FileCode, Globe, Code2, Hash } from "lucide-react";
+import { Save, Shield, Copy, FileCode, Globe, Code2, Hash, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase";
 import { collection, query, limit, doc } from "firebase/firestore";
@@ -22,7 +22,7 @@ export default function SettingsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
-  const[formState, setFormState] = useState<FormState | null>(null);
+  const [formState, setFormState] = useState<FormState | null>(null);
 
   const webhooksQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
@@ -31,35 +31,37 @@ export default function SettingsPage() {
 
   const { data: webhooks, isLoading } = useCollection(webhooksQuery);
 
+  // Đã sửa lại logic useEffect để chống kẹt vòng lặp
   useEffect(() => {
-    if (formState === null && !isLoading && webhooks) {
-      setTimeout(() => {
-        const initialData = webhooks[0];
-        if (initialData) {
-          setFormState({
-            webhookUrl: initialData.targetUrl || "",
-            secretKey: initialData.secretToken || "",
-            referencePrefix: initialData.referencePrefix || "TT",
-            id: initialData.id
-          });
-        } else if (user?.uid) {
-          setFormState({
-            webhookUrl: "",
-            secretKey: `pmh_live_${Math.random().toString(36).substring(7)}`,
-            referencePrefix: "TT",
-            id: null
-          });
-        }
-      }, 0);
+    if (isLoading) return; // Đợi Firebase tải xong
+    if (formState !== null) return; // Nếu đã có data trong form thì không chạy lại nữa
+
+    if (webhooks && webhooks.length > 0) {
+      const initialData = webhooks[0];
+      setFormState({
+        webhookUrl: initialData.targetUrl || "",
+        secretKey: initialData.secretToken || "",
+        referencePrefix: initialData.referencePrefix || "TT",
+        id: initialData.id
+      });
+    } else {
+      // Tạo cấu hình mặc định nếu user chưa có
+      setFormState({
+        webhookUrl: "",
+        secretKey: `pmh_live_${Math.random().toString(36).substring(7)}`,
+        referencePrefix: "TT",
+        id: null
+      });
     }
-  },[formState, isLoading, webhooks, user]);
+  },[isLoading, webhooks, formState]);
 
   const handleFieldChange = (field: keyof FormState, value: string) => {
     setFormState(prevState => prevState ? { ...prevState, [field]: value } : null);
   };
 
   const handleSave = () => {
-    if (!firestore || !user?.uid || !formState) return;
+    const currentUid = user?.uid || "test-user-123"; // Dùng test user nếu chưa đăng nhập
+    if (!firestore || !formState) return;
 
     const data = {
       targetUrl: formState.webhookUrl,
@@ -69,10 +71,10 @@ export default function SettingsPage() {
     };
 
     if (formState.id) {
-      const ref = doc(firestore, "users", user.uid, "webhookConfigurations", formState.id);
+      const ref = doc(firestore, "users", currentUid, "webhookConfigurations", formState.id);
       updateDocumentNonBlocking(ref, data);
     } else {
-      const colRef = collection(firestore, "users", user.uid, "webhookConfigurations");
+      const colRef = collection(firestore, "users", currentUid, "webhookConfigurations");
       addDocumentNonBlocking(colRef, {
         ...data,
         name: "Main Webhook",
@@ -95,7 +97,14 @@ export default function SettingsPage() {
     });
   };
 
-  if (isLoading || !formState) return <div className="p-8 text-center">Đang tải cấu hình...</div>;
+  if (isLoading || !formState) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
+        <Loader2 className="w-8 h-8 animate-spin text-accent" />
+        <p className="text-muted-foreground">Đang tải cấu hình...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">

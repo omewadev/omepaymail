@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Check, Zap, Shield, Crown } from "lucide-react";
 import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
+import { useToast } from "@/hooks/use-toast";
 
 export default function BillingPage() {
   const { user } = useUser();
+  const { toast } = useToast();
   const firestore = useFirestore();
 
   const userProfileRef = useMemoFirebase(() => {
@@ -85,6 +87,7 @@ export default function BillingPage() {
             </CardContent>
             <CardFooter>
               <Button 
+                onClick={() => toast({ title: "Tính năng đang phát triển", description: "Vui lòng liên hệ Admin để nâng cấp gói cước." })}
                 className={`w-full font-bold h-12 ${plan.name === profile?.planName ? 'bg-slate-200 text-slate-500 cursor-not-allowed' : 'bg-primary hover:bg-primary/90'}`}
                 disabled={plan.name === profile?.planName}
               >

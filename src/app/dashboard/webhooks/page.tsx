@@ -10,6 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, limit } from "firebase/firestore";
+import Link from "next/link";
 
 export default function WebhooksPage() {
   const { toast } = useToast();
@@ -129,7 +130,9 @@ export default function WebhooksPage() {
         ) : (
           <div className="text-center py-20 bg-white rounded-xl border-2 border-dashed">
             <p className="text-muted-foreground">Chưa có Endpoint nào được cấu hình.</p>
-            <Button className="mt-4 bg-accent">Thiết lập ngay</Button>
+            <Button asChild className="mt-4 bg-accent">
+              <Link href="/dashboard/settings">Thiết lập ngay</Link>
+            </Button>
           </div>
         )}
       </div>
