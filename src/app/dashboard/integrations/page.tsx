@@ -7,6 +7,7 @@ import { Mail, ShieldCheck, Zap, Globe, Copy, Info, Send, Loader2 } from "lucide
 import { useUser } from "@/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { triggerInboundTest } from "@/app/actions/test-inbound";
 
 export default function IntegrationsPage() {
   const { user } = useUser();
@@ -25,28 +26,20 @@ export default function IntegrationsPage() {
     });
   };
 
-  // Hàm giả lập có một email ngân hàng gửi tới
+  // Hàm giả lập có một email ngân hàng gửi tới (Đã cập nhật dùng Server Action)
   const handleTestInbound = async () => {
     if (!user?.uid) return;
     setIsTesting(true);
     try {
-      const formData = new FormData();
-      formData.append('to', forwardEmail);
-      formData.append('text', 'Tài khoản nhận +500,000 VND. Nội dung: TT123456 thanh toan don hang.');
+      const result = await triggerInboundTest(forwardEmail);
 
-      const res = await fetch('/api/webhooks/inbound', {
-        method: 'POST',
-        body: formData
-      });
-
-      const data = await res.json();
-      if (res.ok) {
+      if (result.success) {
         toast({ 
           title: "Test thành công!", 
           description: "Hệ thống AI đã nhận email giả lập và đang xử lý." 
         });
       } else {
-        toast({ variant: "destructive", title: "Lỗi", description: data.error || "Có lỗi xảy ra" });
+        toast({ variant: "destructive", title: "Lỗi", description: result.error || "Có lỗi xảy ra" });
       }
     } catch (error) {
       toast({ variant: "destructive", title: "Lỗi", description: "Không thể kết nối đến API." });

@@ -6,6 +6,20 @@ import { dispatchWebhook } from '@/lib/webhook-sender';
 
 export async function POST(req: NextRequest) {
   try {
+    // 0. Kiểm tra bảo mật (Security Check)
+    const secret = req.nextUrl.searchParams.get('secret');
+    const expectedSecret = process.env.INBOUND_WEBHOOK_SECRET;
+
+    if (!expectedSecret) {
+      console.error('[Inbound Webhook] INBOUND_WEBHOOK_SECRET is not set in environment variables.');
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
+    if (secret !== expectedSecret) {
+      console.warn('[Inbound Webhook] Unauthorized access attempt. Invalid secret.');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     // SendGrid Inbound Parse gửi dữ liệu dưới dạng multipart/form-data
     const formData = await req.formData();
     
@@ -17,7 +31,6 @@ export async function POST(req: NextRequest) {
     }
 
     // 1. Trích xuất UID từ địa chỉ email (Kỹ thuật Plus Addressing)
-    // Match chuỗi nằm giữa "inbound+" và "@"
     const uidMatch = to.match(/inbound\+([^@]+)@/i);
     if (!uidMatch || !uidMatch[1]) {
       console.error('[Inbound Webhook] Could not extract UID from address:', to);
@@ -45,7 +58,7 @@ export async function POST(req: NextRequest) {
     const webhookConfigSnap = await adminDb.collection('users').doc(uid).collection('webhookConfigurations').limit(1).get();
     const referencePrefix = webhookConfigSnap.empty ? 'TT' : webhookConfigSnap.docs[0].data().referencePrefix;
 
-    // 4. Đẩy nội dung Email vào Genkit AI Flow (Tái sử dụng 100% code cũ của sếp)
+    // 4. Đẩy nội dung Email vào Genkit AI Flow
     try {
       const extractedData = await extractTransaction({
         emailBody: text,
