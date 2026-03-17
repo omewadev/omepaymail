@@ -1,23 +1,27 @@
 'use server';
 
 export async function triggerInboundTest(forwardEmail: string) {
-  const secret = process.env.INBOUND_WEBHOOK_SECRET;
-  // Lấy URL gốc của app (Local hoặc Production)
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:9002';
+  // Dùng secret dự phòng để test
+  const secret = process.env.INBOUND_WEBHOOK_SECRET || 'pmh_super_secret_2026'; 
+  // Trỏ thẳng về domain thật của sếp
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://omepaymail.omewa.vn';
 
-  if (!secret) {
-    return { success: false, error: 'Chưa cấu hình INBOUND_WEBHOOK_SECRET trên Server.' };
-  }
-
-  const formData = new FormData();
-  formData.append('to', forwardEmail);
-  formData.append('text', 'Tài khoản nhận +500,000 VND. Nội dung: TT123456 thanh toan don hang.');
+  // Tự động trích xuất UID từ email trên giao diện để tạo nội dung test chuẩn
+  const uidMatch = forwardEmail.match(/inbound\+([^@]+)@/i);
+  const uid = uidMatch ? uidMatch[1] : '9C0GPFKG';
+  const emailText = `Tai khoan +199,000 VND. Noi dung: PMH PRO ${uid}`;
 
   try {
-    // Gọi nội bộ kèm theo secret key
+    // Gọi API với định dạng JSON chuẩn của Cloudflare Worker
     const res = await fetch(`${baseUrl}/api/webhooks/inbound?secret=${secret}`, {
       method: 'POST',
-      body: formData,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        to: forwardEmail,
+        rawEmail: emailText,
+      }),
     });
 
     const data = await res.json();
