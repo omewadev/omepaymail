@@ -8,7 +8,8 @@ export async function POST(req: NextRequest) {
   try {
     // 0. Kiểm tra bảo mật (Security Check)
     const secret = req.nextUrl.searchParams.get('secret');
-    const expectedSecret = process.env.INBOUND_WEBHOOK_SECRET;
+    // Fallback secret cho môi trường test local
+    const expectedSecret = process.env.INBOUND_WEBHOOK_SECRET || 'pmh_super_secret_2026';
 
     if (!expectedSecret) {
       console.error('[Inbound Webhook] INBOUND_WEBHOOK_SECRET is not set in environment variables.');
@@ -20,11 +21,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // SendGrid Inbound Parse gửi dữ liệu dưới dạng multipart/form-data
-    const formData = await req.formData();
-    
-    const to = formData.get('to') as string; // VD: "inbound+USER_UID_123@omepaymail.vn"
-    const text = formData.get('text') as string; // Nội dung plain text của email
+    // Đã đổi sang nhận JSON từ Cloudflare Worker thay vì FormData của SendGrid
+    const body = await req.json();
+    const to = body.to as string; // VD: "inbound+USER_UID_123@omepaymail.vn"
+    const text = body.text as string; // Nội dung plain text của email
     
     if (!to || !text) {
       return NextResponse.json({ error: 'Missing required fields (to, text)' }, { status: 400 });
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     
     const uid = uidMatch[1];
 
-    // 2. Kiểm tra User và Hạn mức giao dịch trong Firestore
+    // 2. Kiểm tra User trong Firestore
     const userRef = adminDb.collection('users').doc(uid);
     const userDoc = await userRef.get();
     
@@ -49,28 +49,67 @@ export async function POST(req: NextRequest) {
     }
 
     const userData = userDoc.data();
+
+    // =====================================================================
+    // LOGIC XỬ LÝ THANH TOÁN NỘI BỘ (DOGFOODING) DÀNH CHO ADMIN
+    // =====================================================================
+    if (userData?.role === 'admin') {
+      const upgradeMatch = text.match(/PMH\s+(PRO|ENTERPRISE)\s+([A-Z0-9]{8})/i);
+      
+      if (upgradeMatch) {
+        const planName = upgradeMatch[1].toUpperCase();
+        const shortUid = upgradeMatch[2].toUpperCase();
+        
+        console.log(`[Admin Webhook] Detected upgrade request: Plan=${planName}, TargetShortUID=${shortUid}`);
+
+        const targetUsersSnap = await adminDb.collection('users')
+          .where(admin.firestore.FieldPath.documentId(), '>=', shortUid)
+          .where(admin.firestore.FieldPath.documentId(), '<=', shortUid + '\uf8ff')
+          .limit(1)
+          .get();
+
+        if (!targetUsersSnap.empty) {
+          const targetUserDoc = targetUsersSnap.docs[0];
+          const newLimit = planName === 'PRO' ? 1000 : 999999;
+
+          await targetUserDoc.ref.update({
+            planName: planName === 'PRO' ? 'Pro' : 'Enterprise',
+            transactionLimit: newLimit,
+            updatedAt: new Date().toISOString()
+          });
+
+          console.log(`[Admin Webhook] Successfully upgraded user ${targetUserDoc.id} to ${planName}`);
+          return NextResponse.json({ success: true, message: `Upgraded user to ${planName}` });
+        } else {
+          console.warn(`[Admin Webhook] Could not find user with short UID: ${shortUid}`);
+          return NextResponse.json({ success: true, message: 'Upgrade failed: User not found' });
+        }
+      }
+    }
+    // =====================================================================
+
+    // 3. Kiểm tra Hạn mức giao dịch (Dành cho User bình thường)
     if (!userData || (userData.transactionCount >= userData.transactionLimit)) {
       console.log(`[Inbound Webhook] User ${uid} reached transaction limit. Skipping.`);
       return NextResponse.json({ success: false, message: 'Transaction limit reached' }, { status: 403 });
     }
 
-    // 3. Lấy cấu hình Webhook của User để lấy Reference Prefix
+    // 4. Lấy cấu hình Webhook của User để lấy Reference Prefix
     const webhookConfigSnap = await adminDb.collection('users').doc(uid).collection('webhookConfigurations').limit(1).get();
     const referencePrefix = webhookConfigSnap.empty ? 'TT' : webhookConfigSnap.docs[0].data().referencePrefix;
 
-    // 4. Đẩy nội dung Email vào Genkit AI Flow
+    // 5. Đẩy nội dung Email vào Genkit AI Flow
     try {
       const extractedData = await extractTransaction({
         emailBody: text,
         referencePrefix: referencePrefix
       });
 
-      // 5. Nếu AI tìm thấy mã tham chiếu hợp lệ -> Bắn Webhook về website của khách
+      // 6. Nếu AI tìm thấy mã tham chiếu hợp lệ -> Bắn Webhook về website của khách
       if (extractedData.referenceCode) {
         const webhookSuccess = await dispatchWebhook(uid, extractedData);
         
         if (webhookSuccess) {
-          // Tăng biến đếm giao dịch của User lên 1
           await userRef.update({
             transactionCount: admin.firestore.FieldValue.increment(1)
           });
@@ -81,11 +120,9 @@ export async function POST(req: NextRequest) {
       }
     } catch (aiError) {
       console.error(`[AI Error] Failed to process email for user ${uid}:`, aiError);
-      // Vẫn trả về 200 để SendGrid không gửi lại (retry) email rác này
       return NextResponse.json({ success: true, message: 'Processed with AI errors' });
     }
 
-    // Trả về 200 OK để xác nhận với SendGrid là đã nhận mail thành công
     return NextResponse.json({ success: true, message: 'Email processed successfully' });
 
   } catch (error: any) {

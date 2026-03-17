@@ -1,10 +1,37 @@
 
+"use client";
+
 import { SidebarProvider, SidebarInset, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarGroup, SidebarGroupLabel, SidebarFooter } from "@/components/ui/sidebar";
-import { LayoutDashboard, Webhook, Settings, Mail, LogOut, CreditCard } from "lucide-react";
+import { LayoutDashboard, Webhook, Settings, Mail, LogOut, CreditCard, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useFirebase, useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
+import { signOut } from "firebase/auth";
+import { useRouter } from "next/navigation";
+import { doc } from "firebase/firestore";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const { auth } = useFirebase();
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const router = useRouter();
+
+  // Lấy thông tin profile từ Firestore để kiểm tra quyền
+  const userProfileRef = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return doc(firestore, "users", user.uid);
+  },[firestore, user?.uid]);
+
+  const { data: profile } = useDoc(userProfileRef);
+  const isAdmin = profile?.role === 'admin';
+
+  const handleLogout = async () => {
+    if (auth) {
+      await signOut(auth);
+      router.push('/');
+    }
+  };
+
   return (
     <SidebarProvider>
       <Sidebar collapsible="icon" className="border-r border-border bg-white">
@@ -68,15 +95,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              
+              {/* Nút này chỉ hiện ra nếu tài khoản có role là admin */}
+              {isAdmin && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="Admin Panel">
+                    <Link href="/admin" className="flex items-center gap-3 px-6 py-2 transition-colors hover:bg-amber-50 group">
+                      <ShieldCheck className="w-5 h-5 text-amber-500 group-hover:text-amber-600" />
+                      <span className="font-medium text-amber-600">Trang Quản trị</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter className="border-t border-border p-4">
           <SidebarMenuButton asChild>
-            <Link href="/" className="flex items-center gap-3 px-4 py-2 text-destructive hover:bg-destructive/10 rounded-md transition-colors">
+            <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2 text-destructive hover:bg-destructive/10 rounded-md transition-colors cursor-pointer">
               <LogOut className="w-5 h-5" />
               <span className="font-medium">Đăng xuất</span>
-            </Link>
+            </button>
           </SidebarMenuButton>
         </SidebarFooter>
       </Sidebar>

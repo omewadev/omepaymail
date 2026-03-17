@@ -3,11 +3,12 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Mail, ShieldCheck, Zap, Globe, Copy, Info, Send, Loader2 } from "lucide-react";
+import { Mail, ShieldCheck, Zap, Globe, Copy, Info, Send, Loader2, AlertTriangle } from "lucide-react";
 import { useUser } from "@/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { triggerInboundTest } from "@/app/actions/test-inbound";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 export default function IntegrationsPage() {
   const { user } = useUser();
@@ -115,9 +116,18 @@ export default function IntegrationsPage() {
 
                 <div className="flex gap-4 group">
                   <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center shrink-0 font-bold group-hover:scale-110 transition-transform">3</div>
-                  <div>
-                    <p className="font-bold">Tạo bộ lọc (Filter) cho Ngân hàng</p>
-                    <p className="text-sm text-muted-foreground">Tạo bộ lọc trong Gmail: Chỉ chuyển tiếp những email có chứa từ khóa "Biến động số dư" hoặc gửi từ email của ngân hàng.</p>
+                  <div className="space-y-2">
+                    <p className="font-bold">Tạo bộ lọc (Filter) cho Ngân hàng <span className="text-red-500">*Quan trọng*</span></p>
+                    <p className="text-sm text-muted-foreground">Vào ô tìm kiếm của Gmail, bấm biểu tượng tùy chọn. Nhập email của ngân hàng vào ô <b>"Từ"</b> (VD: <i>no-reply@mbbank.com.vn</i>). Bấm <b>"Tạo bộ lọc"</b>.</p>
+                    <p className="text-sm text-muted-foreground">Tích chọn <b>"Chuyển tiếp đến:"</b> và chọn địa chỉ email ảo của bạn. Bấm <b>"Tạo bộ lọc"</b> để hoàn tất.</p>
+                    
+                    <Alert className="bg-amber-50 border-amber-200 mt-3">
+                      <AlertTriangle className="h-4 w-4 text-amber-600" />
+                      <AlertTitle className="text-amber-800 font-bold text-sm">Cảnh báo chống Spam (Tiết kiệm Hạn mức)</AlertTitle>
+                      <AlertDescription className="text-amber-700 text-xs mt-1">
+                        TUYỆT ĐỐI KHÔNG chọn "Chuyển tiếp tất cả email". Việc forward email rác/quảng cáo vào hệ thống sẽ làm cạn kiệt "Hạn mức giao dịch" của bạn rất nhanh do AI vẫn phải đọc và xử lý.
+                      </AlertDescription>
+                    </Alert>
                   </div>
                 </div>
               </div>
