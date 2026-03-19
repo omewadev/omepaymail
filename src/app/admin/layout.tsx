@@ -2,7 +2,7 @@
 "use client";
 
 import { SidebarProvider, SidebarInset, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarGroup, SidebarGroupLabel, SidebarFooter } from "@/components/ui/sidebar";
-import { ShieldCheck, Users, BarChart3, Globe, Bell, FileCode } from "lucide-react";
+import { ShieldCheck, Users, BarChart3, Globe, Bell, FileCode, Settings, History } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -40,6 +40,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Lịch sử Giao dịch">
+                  <Link href="/admin/transactions" className="flex items-center gap-3 px-6 py-2 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">
+                    <History className="w-5 h-5" />
+                    <span>Lịch sử Giao dịch</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Cảnh báo">
                   <Link href="/admin/alerts" className="flex items-center gap-3 px-6 py-2 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">
                     <Bell className="w-5 h-5" />
@@ -52,6 +60,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   <Link href="/admin/system-docs" className="flex items-center gap-3 px-6 py-2 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">
                     <FileCode className="w-5 h-5" />
                     <span>Tài liệu hệ thống</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Cài đặt Hệ thống">
+                  <Link href="/admin/settings" className="flex items-center gap-3 px-6 py-2 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">
+                    <Settings className="w-5 h-5" />
+                    <span>Cài đặt Hệ thống</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

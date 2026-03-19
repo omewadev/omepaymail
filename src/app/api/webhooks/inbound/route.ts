@@ -29,35 +29,21 @@ export async function POST(req: NextRequest) {
 
     let text = "";
     try {
-      // Thử parse bằng postal-mime (Dành cho email thật từ Cloudflare)
       const parser = new PostalMime();
       const parsedEmail = await parser.parse(rawEmail);
       text = parsedEmail.text || parsedEmail.html || rawEmail;
     } catch (e) {
-      // Nếu lỗi parse (do là text test từ giao diện), lấy luôn text gốc
       text = rawEmail;
     }
 
-    const uidMatch = to.match(/inbound\+([^@]+)@/i);
-    if (!uidMatch || !uidMatch[1]) {
-      return NextResponse.json({ error: 'Invalid routing address' }, { status: 400 });
-    }
-    
-    const uid = uidMatch[1];
-
-    const userRef = adminDb.collection('users').doc(uid);
-    const userDoc = await userRef.get();
-    
-    if (!userDoc.exists) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
-    const userData = userDoc.data();
-
     // =====================================================================
-    // LOGIC XỬ LÝ THANH TOÁN NỘI BỘ (DOGFOODING) DÀNH CHO ADMIN
+    // 1. LUỒNG XỬ LÝ THANH TOÁN NỘI BỘ (ADMIN NHẬN TIỀN NÂNG CẤP)
     // =====================================================================
-    if (userData?.role === 'admin') {
+    const sysSettingsSnap = await adminDb.collection('system_settings').doc('general').get();
+    const sysSettings = sysSettingsSnap.data();
+    const adminInboundEmail = sysSettings?.adminInboundEmail || '';
+
+    if (adminInboundEmail && to.toLowerCase() === adminInboundEmail.toLowerCase()) {
       const upgradeMatch = text.match(/PMH\s+(PRO|ENTERPRISE)\s+([A-Z0-9]{8})/i);
       
       if (upgradeMatch) {
@@ -85,8 +71,26 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ success: true, message: 'Upgrade failed: User not found' });
         }
       }
+      return NextResponse.json({ success: true, message: 'Admin email received but no upgrade syntax found' });
     }
+
     // =====================================================================
+    // 2. LUỒNG XỬ LÝ WEBHOOK CHO CUSTOMER (KHÁCH HÀNG NHẬN TIỀN)
+    // =====================================================================
+    const uidMatch = to.match(/inbound\+([^@]+)@/i);
+    if (!uidMatch || !uidMatch[1]) {
+      return NextResponse.json({ error: 'Invalid routing address' }, { status: 400 });
+    }
+    
+    const uid = uidMatch[1];
+    const userRef = adminDb.collection('users').doc(uid);
+    const userDoc = await userRef.get();
+    
+    if (!userDoc.exists) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const userData = userDoc.data();
 
     if (!userData || (userData.transactionCount >= userData.transactionLimit)) {
       return NextResponse.json({ success: false, message: 'Transaction limit reached' }, { status: 403 });

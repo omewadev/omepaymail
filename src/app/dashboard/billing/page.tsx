@@ -3,33 +3,31 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, Zap, Shield, Crown, QrCode, Loader2 } from "lucide-react";
+import { Check, Zap, Shield, Crown, Loader2 } from "lucide-react";
 import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import Image from "next/image";
-
-// CẤU HÌNH TÀI KHOẢN NGÂN HÀNG CỦA ADMIN (Sếp thay đổi thông tin này)
-const ADMIN_BANK = {
-  BANK_ID: "MB", // Mã ngân hàng (VD: MB, VCB, TCB, VTB...)
-  ACCOUNT_NO: "0123456789", // Số tài khoản của sếp
-  ACCOUNT_NAME: "NGUYEN VAN ADMIN", // Tên chủ tài khoản (Không dấu)
-};
 
 export default function BillingPage() {
   const { user } = useUser();
   const firestore = useFirestore();
   
-  // State quản lý Modal thanh toán
-  const[isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const[selectedPlan, setSelectedPlan] = useState<any>(null);
 
   const userProfileRef = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return doc(firestore, "users", user.uid);
-  }, [firestore, user?.uid]);
+  },[firestore, user?.uid]);
+
+  const systemSettingsRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return doc(firestore, "system_settings", "general");
+  }, [firestore]);
 
   const { data: profile } = useDoc(userProfileRef);
+  const { data: systemSettings } = useDoc(systemSettingsRef);
 
   const plans =[
     {
@@ -62,6 +60,7 @@ export default function BillingPage() {
     }
   ];
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleUpgradeClick = (plan: any) => {
     if (plan.name === "Enterprise") {
       window.location.href = "mailto:admin@omepaymail.vn?subject=Đăng ký gói Enterprise";
@@ -71,11 +70,13 @@ export default function BillingPage() {
     setIsModalOpen(true);
   };
 
-  // Tạo cú pháp chuyển khoản duy nhất: PMH [TÊN_GÓI][8_KÝ_TỰ_ĐẦU_CỦA_UID]
   const transferSyntax = user?.uid ? `PMH ${selectedPlan?.name.toUpperCase()} ${user.uid.substring(0, 8).toUpperCase()}` : "";
   
-  // Tạo link ảnh VietQR động
-  const vietQrUrl = selectedPlan ? `https://img.vietqr.io/image/${ADMIN_BANK.BANK_ID}-${ADMIN_BANK.ACCOUNT_NO}-compact2.png?amount=${selectedPlan.priceNumber}&addInfo=${encodeURIComponent(transferSyntax)}&accountName=${encodeURIComponent(ADMIN_BANK.ACCOUNT_NAME)}` : "";
+  const bankId = systemSettings?.bankId || "";
+  const accountNo = systemSettings?.accountNo || "";
+  const accountName = systemSettings?.accountName || "";
+
+  const vietQrUrl = selectedPlan && accountNo ? `https://img.vietqr.io/image/${bankId}-${accountNo}-compact2.png?amount=${selectedPlan.priceNumber}&addInfo=${encodeURIComponent(transferSyntax)}&accountName=${encodeURIComponent(accountName)}` : "";
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -127,7 +128,6 @@ export default function BillingPage() {
         ))}
       </div>
 
-      {/* Modal Thanh toán bằng VietQR */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -141,6 +141,7 @@ export default function BillingPage() {
             {vietQrUrl ? (
               <div className="p-2 bg-white rounded-xl border-2 border-dashed border-accent/50">
                 {/* Sử dụng thẻ img thường thay vì next/image để tránh lỗi config domain remotePatterns */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img 
                   src={vietQrUrl} 
                   alt="VietQR" 
@@ -148,8 +149,8 @@ export default function BillingPage() {
                 />
               </div>
             ) : (
-              <div className="w-64 h-64 flex items-center justify-center bg-slate-100 rounded-xl">
-                <Loader2 className="w-8 h-8 animate-spin text-accent" />
+              <div className="w-64 h-64 flex flex-col items-center justify-center bg-slate-100 rounded-xl text-center p-4">
+                {accountNo ? <Loader2 className="w-8 h-8 animate-spin text-accent" /> : <p className="text-sm text-red-500 font-bold">Admin chưa cấu hình Ngân hàng. Vui lòng liên hệ hỗ trợ.</p>}
               </div>
             )}
 

@@ -29,25 +29,49 @@ export async function dispatchWebhook(uid: string, transactionData: ExtractTrans
       timestamp: new Date().toISOString()
     };
 
-    // 3. Gửi HTTP POST Request
-    const response = await fetch(targetUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'PayMailHook-Engine/1.0',
-      },
-      body: JSON.stringify(payload),
-    });
+   // 3. Gửi HTTP POST Request & Ghi Log
+   let isSuccess = false;
+   let statusCode = 0;
+   let responseBody = "";
 
-    if (!response.ok) {
-      throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
-    }
+   try {
+     const response = await fetch(targetUrl, {
+       method: 'POST',
+       headers: {
+         'Content-Type': 'application/json',
+         'User-Agent': 'PayMailHook-Engine/1.0',
+       },
+       body: JSON.stringify(payload),
+     });
+     
+     statusCode = response.status;
+     isSuccess = response.ok;
+     responseBody = await response.text();
+   } catch (fetchError: any) {
+     statusCode = 500;
+     isSuccess = false;
+     responseBody = fetchError.message || "Connection failed";
+   }
 
-    console.log(`[Webhook] Successfully dispatched to ${targetUrl} for user ${uid}`);
-    return true;
+   // 4. Ghi Log vào Firestore
+   await adminDb.collection('users').doc(uid).collection('webhook_logs').add({
+     ...transactionData,
+     targetUrl,
+     isSuccess,
+     statusCode,
+     responseBody: responseBody.substring(0, 500), // Giới hạn độ dài log để tiết kiệm DB
+     createdAt: new Date().toISOString()
+   });
 
-  } catch (error) {
-    console.error(`[Webhook] Failed to dispatch for user ${uid}:`, error);
-    return false;
-  }
+   if (!isSuccess) {
+     throw new Error(`HTTP Error: ${statusCode} - ${responseBody}`);
+   }
+
+   console.log(`[Webhook] Successfully dispatched to ${targetUrl} for user ${uid}`);
+   return true;
+
+ } catch (error) {
+   console.error(`[Webhook] Failed to dispatch for user ${uid}:`, error);
+   return false;
+ }
 }

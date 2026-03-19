@@ -2,7 +2,7 @@
 "use client";
 
 import { SidebarProvider, SidebarInset, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarGroup, SidebarGroupLabel, SidebarFooter } from "@/components/ui/sidebar";
-import { LayoutDashboard, Webhook, Settings, Mail, LogOut, CreditCard, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Webhook, Settings, Mail, LogOut, CreditCard, ShieldCheck, History } from "lucide-react";
 import Link from "next/link";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useFirebase, useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
@@ -62,6 +62,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <Link href="/dashboard/webhooks" className="flex items-center gap-3 px-6 py-2 transition-colors hover:bg-secondary group">
                     <Webhook className="w-5 h-5 text-muted-foreground group-hover:text-accent" />
                     <span className="font-medium">Webhooks</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Lịch sử Webhook">
+                  <Link href="/dashboard/history" className="flex items-center gap-3 px-6 py-2 transition-colors hover:bg-secondary group">
+                    <History className="w-5 h-5 text-muted-foreground group-hover:text-accent" />
+                    <span className="font-medium">Lịch sử Webhook</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
