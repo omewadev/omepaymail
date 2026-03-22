@@ -223,7 +223,7 @@ export default function Home() {
             </Button>
           )}
           <Button variant="outline" size="lg" className="px-8 h-14 text-lg border-[#293462] text-[#293462] hover:bg-opacity-5 hover:bg-[#293462]" asChild>
-            <Link href="/docs"><FileCode className="mr-2 w-5 h-5" /> Xem Tài liệu</Link>
+            <Link href="/huong-dan"><FileCode className="mr-2 w-5 h-5" /> Xem Tài liệu</Link>
           </Button>
         </div>
       </section>
