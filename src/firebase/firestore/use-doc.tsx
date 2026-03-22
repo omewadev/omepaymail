@@ -25,7 +25,7 @@ export function useDoc<T = any>(
 ): UseDocResult<T> {
   type StateDataType = WithId<T> | null;
 
-  const[data, setData] = useState<StateDataType>(null);
+  const [data, setData] = useState<StateDataType>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
@@ -55,15 +55,18 @@ export function useDoc<T = any>(
         setIsLoading(false);
       },
       (_error: FirestoreError) => {
-        const contextualError = new FirestorePermissionError({
-          operation: 'get',
-          path: memoizedDocRef.path,
-        })
-
-        setError(contextualError)
-        setData(null)
-        setIsLoading(false)
-        errorEmitter.emit('permission-error', contextualError);
+        console.error("[useDoc Error]:", _error);
+        setError(_error); // Trả về đúng lỗi gốc
+        setData(null);
+        setIsLoading(false);
+        
+        if (_error.code === 'permission-denied') {
+          const contextualError = new FirestorePermissionError({
+            operation: 'get',
+            path: memoizedDocRef.path,
+          });
+          errorEmitter.emit('permission-error', contextualError);
+        }
       }
     );
 

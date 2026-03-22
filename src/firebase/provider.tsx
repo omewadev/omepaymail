@@ -70,15 +70,11 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   // Effect to subscribe to Firebase auth state changes
   useEffect(() => {
     if (!auth) { // If no Auth service instance, cannot determine user state
-      setTimeout(() => {
-        setUserAuthState({ user: null, isUserLoading: false, userError: new Error("Auth service not provided.") });
-      }, 0);
+      setUserAuthState({ user: null, isUserLoading: false, userError: new Error("Auth service not provided.") });
       return;
     }
 
-    setTimeout(() => {
-      setUserAuthState({ user: null, isUserLoading: true, userError: null }); // Reset on auth instance change
-    }, 0);
+    setUserAuthState({ user: null, isUserLoading: true, userError: null }); // Reset on auth instance change
 
     const unsubscribe = onAuthStateChanged(
       auth,

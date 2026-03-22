@@ -8,6 +8,8 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // [CẬP NHẬT] Kích hoạt chế độ Standalone để sẵn sàng chạy siêu nhẹ trên VPS FastPanel / Docker
+  output: 'standalone',
   images: {
     remotePatterns: [
       {

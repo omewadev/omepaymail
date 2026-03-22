@@ -15,8 +15,8 @@ export default function IntegrationsPage() {
   const { toast } = useToast();
   const[isTesting, setIsTesting] = useState(false);
   
-  // Tạo địa chỉ email ảo dựa trên UID của user
-  const forwardEmail = user?.uid ? `inbound+${user.uid}@omepaymail.vn` : "Đang tải...";
+  // Tạo địa chỉ email ảo dựa trên UID của user (Đã cập nhật theo Cloudflare Routing)
+  const forwardEmail = user?.uid ? `inbound+${user.uid}@omewa.vn` : "Đang tải...";
 
   const copyToClipboard = () => {
     if (!user?.uid) return;

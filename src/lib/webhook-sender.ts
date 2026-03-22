@@ -35,6 +35,9 @@ export async function dispatchWebhook(uid: string, transactionData: ExtractTrans
    let responseBody = "";
 
    try {
+     const controller = new AbortController();
+     const timeoutId = setTimeout(() => controller.abort(), 8000); // Ép Timeout sau 8 giây
+
      const response = await fetch(targetUrl, {
        method: 'POST',
        headers: {
@@ -42,15 +45,22 @@ export async function dispatchWebhook(uid: string, transactionData: ExtractTrans
          'User-Agent': 'PayMailHook-Engine/1.0',
        },
        body: JSON.stringify(payload),
+       signal: controller.signal
      });
      
+     clearTimeout(timeoutId);
      statusCode = response.status;
      isSuccess = response.ok;
      responseBody = await response.text();
    } catch (fetchError: any) {
-     statusCode = 500;
      isSuccess = false;
-     responseBody = fetchError.message || "Connection failed";
+     if (fetchError.name === 'AbortError') {
+       statusCode = 408;
+       responseBody = "Request Timeout: URL Webhook phản hồi quá chậm (>8s).";
+     } else {
+       statusCode = 500;
+       responseBody = fetchError.message || "Connection failed";
+     }
    }
 
    // 4. Ghi Log vào Firestore

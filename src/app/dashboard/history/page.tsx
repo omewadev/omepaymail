@@ -21,9 +21,19 @@ export default function WebhookHistoryPage() {
     );
   },[firestore, user?.uid]);
 
-  const { data: logs, isLoading } = useCollection(logsQuery);
+  const { data: logs, isLoading, error: logsError } = useCollection(logsQuery);
 
   if (isLoading) return <div className="p-8 text-center"><Loader2 className="animate-spin mx-auto w-8 h-8 text-accent" /></div>;
+
+  if (logsError) {
+    return (
+      <div className="p-8 text-center space-y-4 bg-red-50 rounded-xl border border-red-200">
+        <p className="text-red-600 font-bold text-lg">Đã xảy ra lỗi khi tải dữ liệu lịch sử.</p>
+        <p className="text-sm text-red-500">{logsError.message}</p>
+        <p className="text-xs text-slate-500">Mẹo: Mở Developer Tools (F12) chuyển sang tab Console. Nếu đây là lỗi thiếu Index, Firebase sẽ cung cấp một đường link màu xanh để bạn click vào và tạo Index tự động.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -53,14 +63,16 @@ export default function WebhookHistoryPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {logs.map((log) => (
+              {logs.map((log) => (
                   <TableRow key={log.id}>
                     <TableCell className="text-xs text-muted-foreground">
-                      {log.createdAt ? format(new Date(log.createdAt), "dd/MM/yyyy HH:mm:ss") : "N/A"}
+                      {log.createdAt && !isNaN(new Date(log.createdAt).getTime()) 
+                        ? format(new Date(log.createdAt), "dd/MM/yyyy HH:mm:ss") 
+                        : "N/A"}
                     </TableCell>
                     <TableCell className="font-mono font-bold text-primary">{log.referenceCode || "N/A"}</TableCell>
                     <TableCell className="font-bold text-green-600">
-                      +{log.amount?.toLocaleString()} {log.currency}
+                      +{Number(log.amount || 0).toLocaleString()} {log.currency}
                     </TableCell>
                     <TableCell className="text-xs">{log.senderName || "Ẩn danh"}</TableCell>
                     <TableCell>

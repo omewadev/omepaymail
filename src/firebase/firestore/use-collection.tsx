@@ -42,17 +42,14 @@ export function useCollection<T = any>(
 
   useEffect(() => {
     if (!memoizedTargetRefOrQuery) {
-      setTimeout(() => {
-        setData(null);
-        setIsLoading(false);
-        setError(null);
-      }, 0);
+      setData(null);
+      setIsLoading(false);
+      setError(null);
       return;
     }
-    setTimeout(() => {
-      setIsLoading(true);
-      setError(null);
-    }, 0);
+    
+    setIsLoading(true);
+    setError(null);
 
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
@@ -65,20 +62,24 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (_error: FirestoreError) => {
-        const path: string =
-          memoizedTargetRefOrQuery.type === 'collection'
-            ? (memoizedTargetRefOrQuery as CollectionReference).path
-            : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()
+        console.error("[useCollection Error]:", _error);
+        setError(_error); // Trả về đúng lỗi gốc để UI tự xử lý
+        setData(null);
+        setIsLoading(false);
+        
+        // Chỉ phát ra Global Error nếu ĐÚNG là lỗi phân quyền
+        if (_error.code === 'permission-denied') {
+          const path: string =
+            memoizedTargetRefOrQuery.type === 'collection'
+              ? (memoizedTargetRefOrQuery as CollectionReference).path
+              : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString();
 
-        const contextualError = new FirestorePermissionError({
-          operation: 'list',
-          path,
-        })
-
-        setError(contextualError)
-        setData(null)
-        setIsLoading(false)
-        errorEmitter.emit('permission-error', contextualError);
+          const contextualError = new FirestorePermissionError({
+            operation: 'list',
+            path,
+          });
+          errorEmitter.emit('permission-error', contextualError);
+        }
       }
     );
 
