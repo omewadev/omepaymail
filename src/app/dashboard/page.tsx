@@ -9,17 +9,8 @@ import { AlertTriangle, ArrowRight, Mail, Cpu, Globe, Zap, CheckCircle2 } from "
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
 import Link from "next/link";
 import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from "@/firebase";
-import { doc, collection, query, limit } from "firebase/firestore";
-
-const data = [
-  { name: 'T2', total: 400 },
-  { name: 'T3', total: 300 },
-  { name: 'T4', total: 200 },
-  { name: 'T5', total: 278 },
-  { name: 'T6', total: 189 },
-  { name: 'T7', total: 239 },
-  { name: 'CN', total: 349 },
-];
+import { doc, collection, query, limit, orderBy } from "firebase/firestore";
+import { useMemo } from "react";
 
 export default function OverviewPage() {
   const { user } = useUser();
@@ -39,6 +30,34 @@ export default function OverviewPage() {
 
   const { data: webhooks } = useCollection(webhooksQuery);
   const prefix = webhooks?.[0]?.referencePrefix || "TT";
+
+  // Lấy lịch sử giao dịch thực tế từ Database
+  const logsQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return query(collection(firestore, "users", user.uid, "webhook_logs"), orderBy("createdAt", "desc"), limit(100));
+  }, [firestore, user?.uid]);
+  const { data: logs } = useCollection(logsQuery);
+
+  // Xử lý dữ liệu thực tế cho biểu đồ (Gom nhóm theo thứ trong tuần)
+  const chartData = useMemo(() => {
+    const baseData =[
+      { name: 'CN', total: 0 }, { name: 'T2', total: 0 }, { name: 'T3', total: 0 },
+      { name: 'T4', total: 0 }, { name: 'T5', total: 0 }, { name: 'T6', total: 0 }, { name: 'T7', total: 0 }
+    ];
+
+    if (logs) {
+      logs.forEach(log => {
+        if (log.createdAt) {
+          const date = new Date(log.createdAt);
+          const dayIndex = date.getDay(); // 0 = CN, 1 = T2...
+          baseData[dayIndex].total += 1; // Tăng số lượng giao dịch cho ngày đó
+        }
+      });
+    }
+
+    // Sắp xếp lại mảng để T2 đứng đầu, CN đứng cuối cho thuận mắt người Việt
+    return [baseData[1], baseData[2], baseData[3], baseData[4], baseData[5], baseData[6], baseData[0]];
+  }, [logs]);
 
   const usageCount = profile?.transactionCount || 0;
   const limitCount = profile?.transactionLimit || 100;
@@ -177,9 +196,9 @@ export default function OverviewPage() {
             <CardTitle className="text-lg">Giao dịch tuần này</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[250px] w-full mt-4">
+          <div className="h-[250px] w-full mt-4">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data}>
+                <BarChart data={chartData}>
                   <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                   <Tooltip cursor={{fill: 'rgba(111, 45, 189, 0.05)'}} />

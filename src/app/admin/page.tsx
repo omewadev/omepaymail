@@ -4,21 +4,61 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Users, CreditCard, Activity, ArrowUpRight } from "lucide-react";
+import { Users, CreditCard, Activity, ArrowUpRight, Loader2 } from "lucide-react";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, query, orderBy, limit } from "firebase/firestore";
+import { useMemo } from "react";
 
 export default function AdminDashboard() {
-  const stats = [
-    { label: "Tổng người dùng", value: "1,250", icon: Users, color: "text-blue-600" },
-    { label: "Giao dịch/tháng", value: "45,000", icon: Activity, color: "text-green-600" },
-    { label: "Doanh thu ước tính", value: "125M VNĐ", icon: CreditCard, color: "text-accent" },
-  ];
+  const firestore = useFirestore();
+  // Lấy danh sách user từ Database, sắp xếp theo số lượng giao dịch giảm dần
+  const usersQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, "users"), orderBy("transactionCount", "desc"), limit(50));
+  }, [firestore]);
 
-  const topUsers = [
-    { name: "Nguyễn Văn A", email: "a@gmail.com", usage: "950/1000", status: "Cảnh báo" },
-    { name: "Shop Quần Áo XYZ", email: "xyz@shop.vn", usage: "450/1000", status: "Bình thường" },
-    { name: "Đại lý Vé Máy Bay", email: "vemaybay@mail.com", usage: "2500/3000", status: "Bình thường" },
-    { name: "Trần Thị B", email: "b@yahoo.com", usage: "99/100", status: "Sắp hết hạn" },
-  ];
+  const { data: users, isLoading } = useCollection(usersQuery);
+
+  // Tính toán thống kê thực tế
+  const stats = useMemo(() => {
+    const totalUsers = users?.length || 0;
+    const totalTransactions = users?.reduce((sum, u) => sum + (u.transactionCount || 0), 0) || 0;
+    const estimatedRevenue = users?.reduce((sum, u) => {
+      if (u.planName === 'Pro') return sum + 199000;
+      if (u.planName === 'Enterprise') return sum + 500000;
+      return sum;
+    }, 0) || 0;
+
+    return[
+      { label: "Tổng người dùng", value: totalUsers.toLocaleString(), icon: Users, color: "text-blue-600" },
+      { label: "Giao dịch/tháng", value: totalTransactions.toLocaleString(), icon: Activity, color: "text-green-600" },
+      { label: "Doanh thu ước tính", value: `${(estimatedRevenue / 1000000).toFixed(1)}M VNĐ`, icon: CreditCard, color: "text-accent" },
+    ];
+  }, [users]);
+
+  // Lấy top 5 user dùng nhiều nhất
+  const topUsers = useMemo(() => {
+    if (!users) return[];
+    return users.slice(0, 5).map(u => {
+      const usage = u.transactionCount || 0;
+      const maxLimit = u.transactionLimit || 100;
+      const percent = maxLimit > 0 ? (usage / maxLimit) * 100 : 0;
+      
+      let status = "Bình thường";
+      if (percent >= 90) status = "Sắp hết hạn";
+      else if (percent >= 80) status = "Cảnh báo";
+
+      return {
+        name: u.displayName || "Chưa cập nhật",
+        email: u.email,
+        usage: `${usage.toLocaleString()}/${maxLimit.toLocaleString()}`,
+        percent: Math.min(percent, 100),
+        status: status
+      };
+    });
+  }, [users]);
+
+  if (isLoading) return <div className="p-8 text-center"><Loader2 className="animate-spin mx-auto w-8 h-8 text-accent" /></div>;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -63,8 +103,8 @@ export default function AdminDashboard() {
                   <TableCell>
                     <div className="w-full bg-slate-100 rounded-full h-1.5 max-w-[100px] mb-1">
                       <div 
-                        className={`h-1.5 rounded-full ${u.status === 'Cảnh báo' ? 'bg-red-500' : 'bg-primary'}`} 
-                        style={{ width: '85%' }} 
+                        className={`h-1.5 rounded-full ${u.status !== 'Bình thường' ? 'bg-red-500' : 'bg-primary'}`} 
+                        style={{ width: `${u.percent}%` }} 
                       />
                     </div>
                     <span className="text-[10px] font-mono">{u.usage}</span>
