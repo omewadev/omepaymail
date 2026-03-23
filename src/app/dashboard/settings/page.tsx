@@ -137,13 +137,13 @@ export default function SettingsPage() {
                   value={formState.referencePrefix}
                   onChange={(e) => handleFieldChange('referencePrefix', e.target.value)}
                   className="font-bold uppercase"
-                />
-                <p className="text-[10px] text-muted-foreground">
-                  AI sẽ tìm kiếm nội dung chuyển khoản bắt đầu bằng mã này (VD: <b>{formState.referencePrefix}</b>123456).
-                </p>
-              </div>
-
-              <div className="space-y-2">
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    AI sẽ tìm kiếm nội dung chuyển khoản bắt đầu bằng mã này (VD: <b>{formState.referencePrefix}</b>123456).
+                  </p>
+                </div>
+  
+                <div className="space-y-2">
                 <Label htmlFor="secret-key">Secret Key (Xác thực)</Label>
                 <div className="flex gap-2">
                   <Input 

@@ -89,9 +89,9 @@ export default function WebhooksPage() {
                 </Badge>
                 <Switch checked={hook.isEnabled} />
               </div>
-            </CardHeader>
+              </CardHeader>
             <CardContent className="pt-4">
-              <div className="grid md:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8"> {/* Đã sửa: Thêm grid-cols-1 cho mobile */}
                 <div className="space-y-4">
                   <h4 className="font-bold text-primary flex items-center gap-2">
                     <Shield className="w-4 h-4" /> Payload & Security
@@ -105,11 +105,11 @@ export default function WebhooksPage() {
                 </div>
                 
                 <div className="p-4 bg-slate-900 rounded-xl border border-slate-800 shadow-inner">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Dữ liệu JSON mẫu (Prefix: {hook.referencePrefix})</p>
-                    <Badge variant="outline" className="text-[9px] text-slate-400 border-slate-700">POST</Badge>
+                <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs text-slate-500 uppercase font-bold tracking-widest">Dữ liệu JSON mẫu (Prefix: {hook.referencePrefix})</p>
+                    <Badge variant="outline" className="text-xs text-slate-400 border-slate-700">POST</Badge>
                   </div>
-                  <pre className="text-[12px] font-mono text-green-400 overflow-x-auto leading-relaxed">
+                  <pre className="text-xs font-mono text-green-400 overflow-x-auto leading-relaxed">
 {`{
   "amount": 500000,
   "referenceCode": "${hook.referencePrefix}123456",

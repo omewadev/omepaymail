@@ -58,7 +58,7 @@ export default function AdminAlertsPage() {
     setLoadingId(alert.id);
     try {
       const result = await generateNotification({
-        userName: alert.displayName || alert.email,
+        userName: alert.displayName || alert.email || 'Unknown User', // Đảm bảo userName luôn là string
         used: alert.transactionCount || 0,
         limit: alert.transactionLimit || 100,
         planName: alert.planName || "Free",
@@ -132,17 +132,17 @@ export default function AdminAlertsPage() {
                     <TableRow key={user.id}>
                       <TableCell>
                         <div className="font-bold">{user.displayName || "N/A"}</div>
-                        <div className="text-[10px] text-muted-foreground">{user.email}</div>
+                        <div className="text-xs text-muted-foreground">{user.email}</div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <span className="font-mono text-amber-600 font-bold">{usage.toLocaleString()}/{limit.toLocaleString()}</span>
-                          <Badge variant="outline" className={`text-[10px] ${percent >= 95 ? 'bg-red-50 text-red-600 border-red-200' : 'bg-amber-50'}`}>
+                          <Badge variant="outline" className={`text-xs ${percent >= 95 ? 'bg-red-50 text-red-600 border-red-200' : 'bg-amber-50'}`}>
                             {percent}%
                           </Badge>
                         </div>
                       </TableCell>
-                      <TableCell><Badge variant="secondary">{user.planName}</Badge></TableCell>
+                      <TableCell><Badge variant="secondary" className="text-xs">{user.planName}</Badge></TableCell>
                       <TableCell className="text-right">
                         <Button
                           size="sm"

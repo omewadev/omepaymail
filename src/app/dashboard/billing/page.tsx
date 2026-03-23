@@ -76,9 +76,11 @@ export default function BillingPage() {
   const accountNo = systemSettings?.accountNo || "";
   const accountName = systemSettings?.accountName || "";
 
-  const vietQrUrl = selectedPlan && accountNo ? `https://img.vietqr.io/image/${bankId}-${accountNo}-compact2.png?amount=${selectedPlan.priceNumber}&addInfo=${encodeURIComponent(transferSyntax)}&accountName=${encodeURIComponent(accountName)}` : "";
+  // Đã sửa: Đổi template từ compact2.png sang qr_only.png để bỏ chữ nhỏ trong ảnh, giúp mã QR to và dễ quét hơn
+  const vietQrUrl = selectedPlan && accountNo ? `https://img.vietqr.io/image/${bankId}-${accountNo}-qr_only.png?amount=${selectedPlan.priceNumber}&addInfo=${encodeURIComponent(transferSyntax)}&accountName=${encodeURIComponent(accountName)}` : "";
 
   return (
+
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
         <h2 className="text-3xl font-headline font-bold text-primary">Gói cước dịch vụ</h2>
@@ -154,18 +156,26 @@ export default function BillingPage() {
               </div>
             )}
 
+            {/* Thêm thông tin ngân hàng và số tài khoản rõ ràng hơn */}
+            {accountNo && accountName && (
+              <div className="w-full text-center space-y-1 mt-4"> {/* Thêm mt-4 để tạo khoảng cách */}
+                <p className="text-xl font-extrabold text-primary">{accountName}</p>
+                <p className="text-lg font-mono text-slate-700">{accountNo} ({bankId})</p>
+              </div>
+            )}
+
             <div className="w-full bg-slate-50 p-4 rounded-lg border space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Số tiền:</span>
-                <span className="font-bold text-primary">{selectedPlan?.price}</span>
+                <span className="font-bold text-primary text-lg">{selectedPlan?.price}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Nội dung CK:</span>
-                <span className="font-mono font-bold text-accent bg-accent/10 px-2 py-1 rounded">{transferSyntax}</span>
+                <span className="font-mono font-bold text-accent bg-accent/10 px-2 py-1 rounded text-lg">{transferSyntax}</span>
               </div>
-            </div>
+              </div>
             
-            <p className="text-xs text-center text-muted-foreground mt-2">
+            <p className="text-sm text-center text-muted-foreground mt-2">
               Hệ thống sẽ tự động nâng cấp tài khoản của bạn trong vòng 1-2 phút sau khi nhận được thanh toán. Bạn không cần làm gì thêm!
             </p>
           </div>

@@ -74,11 +74,11 @@ export default function AdminTransactionsPage() {
                     <TableCell className="text-xs">{log.senderName || "Ẩn danh"}</TableCell>
                     <TableCell>
                       {log.isSuccess ? (
-                        <Badge className="bg-green-100 text-green-700 hover:bg-green-200 border-green-200 flex w-fit items-center gap-1">
+                        <Badge className="bg-green-100 text-green-700 hover:bg-green-200 border-green-200 flex w-fit items-center gap-1 text-xs">
                           <CheckCircle2 className="w-3 h-3" /> Thành công ({log.statusCode})
                         </Badge>
                       ) : (
-                        <Badge variant="destructive" className="flex w-fit items-center gap-1">
+                        <Badge variant="destructive" className="flex w-fit items-center gap-1 text-xs">
                           <XCircle className="w-3 h-3" /> Lỗi ({log.statusCode})
                         </Badge>
                       )}

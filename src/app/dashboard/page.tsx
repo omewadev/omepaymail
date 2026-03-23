@@ -125,11 +125,11 @@ export default function OverviewPage() {
 
             {/* Bước 3: AI Extract */}
             <div className="md:col-span-1 flex flex-col items-center text-center space-y-2 relative">
-              <div className="w-16 h-16 rounded-2xl bg-accent text-white shadow-lg flex items-center justify-center animate-pulse">
+            <div className="w-16 h-16 rounded-2xl bg-accent text-white shadow-lg flex items-center justify-center animate-pulse">
                 <Cpu className="w-8 h-8" />
               </div>
-              <span className="text-[10px] font-bold uppercase text-accent">AI ({prefix}xxxxxx)</span>
-              <Badge className="absolute -top-2 -right-2 bg-green-500 text-[8px]">Real-time</Badge>
+              <span className="text-xs font-bold uppercase text-accent">AI ({prefix}xxxxxx)</span>
+              <Badge className="absolute -top-2 -right-2 bg-green-500 text-xs">Real-time</Badge>
             </div>
 
             <div className="hidden md:flex md:col-span-1 justify-center">

@@ -85,7 +85,7 @@ export default function UserManagementPage() {
                       </Button>
                     </div>
                   </TableCell>
-                  <TableCell><Badge variant="outline">{u.planName}</Badge></TableCell>
+                  <TableCell><Badge variant="outline" className="text-xs">{u.planName}</Badge></TableCell>
                   <TableCell className={u.transactionCount / u.transactionLimit > 0.9 ? "text-red-500 font-bold" : ""}>
                     {u.transactionCount?.toLocaleString()}
                   </TableCell>
