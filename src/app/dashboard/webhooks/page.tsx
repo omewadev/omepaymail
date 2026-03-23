@@ -4,7 +4,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, Send, ExternalLink, Shield, Info, Copy, Terminal } from "lucide-react";
+import { Plus, Trash2, Send, ExternalLink, Shield, Info, Copy, Terminal, BookOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
@@ -43,9 +43,16 @@ export default function WebhooksPage() {
           <h2 className="text-3xl font-headline font-bold text-primary">Quản lý Webhooks</h2>
           <p className="text-muted-foreground">Cấu hình các điểm nhận dữ liệu (Endpoint) từ hệ thống AI.</p>
         </div>
-        <Button className="bg-accent hover:bg-accent/90 font-bold h-12">
-          <Plus className="w-5 h-5 mr-2" /> Thêm Endpoint
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button asChild variant="outline" className="h-12 font-bold border-primary text-primary hover:bg-primary/5">
+            <Link href="/huong-dan" target="_blank">
+              <BookOpen className="w-5 h-5 mr-2" /> Xem Hướng dẫn
+            </Link>
+          </Button>
+          <Button className="bg-accent hover:bg-accent/90 font-bold h-12">
+            <Plus className="w-5 h-5 mr-2" /> Thêm Endpoint
+          </Button>
+        </div>
       </div>
 
       <Alert className="bg-primary/5 border-primary/20">

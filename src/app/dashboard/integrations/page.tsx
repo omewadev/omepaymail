@@ -3,8 +3,9 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Mail, ShieldCheck, Zap, Globe, Copy, Info, Send, Loader2, AlertTriangle } from "lucide-react";
+import { Mail, ShieldCheck, Zap, Globe, Copy, Info, Send, Loader2, AlertTriangle, BookOpen } from "lucide-react";
 import { useUser } from "@/firebase";
+import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { triggerInboundTest } from "@/app/actions/test-inbound";
@@ -56,6 +57,11 @@ export default function IntegrationsPage() {
           <h2 className="text-3xl font-headline font-bold text-primary">Tích hợp Email Forwarding</h2>
           <p className="text-muted-foreground">Tự động hóa an toàn 100% không cần cấp quyền truy cập mật khẩu Gmail.</p>
         </div>
+        <Button asChild variant="outline" className="h-12 font-bold border-primary text-primary hover:bg-primary/5">
+          <Link href="/huong-dan" target="_blank">
+            <BookOpen className="w-5 h-5 mr-2" /> Xem Hướng dẫn
+          </Link>
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

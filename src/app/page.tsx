@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Mail, Zap, ArrowRight, Globe, FileCode, Loader2 } from 'lucide-react';
+import { Mail, Zap, ArrowRight, Globe, FileCode, Loader2, BookOpen } from 'lucide-react';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { useFirebase } from '@/firebase/provider'; 
 import { GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
@@ -223,7 +223,10 @@ export default function Home() {
             </Button>
           )}
           <Button variant="outline" size="lg" className="px-8 h-14 text-lg border-[#293462] text-[#293462] hover:bg-opacity-5 hover:bg-[#293462]" asChild>
-            <Link href="/huong-dan"><FileCode className="mr-2 w-5 h-5" /> Xem Tài liệu</Link>
+            <Link href="/huong-dan"><BookOpen className="mr-2 w-5 h-5" /> Hướng dẫn Cài đặt</Link>
+          </Button>
+          <Button variant="ghost" size="lg" className="px-8 h-14 text-lg text-muted-foreground hover:text-[#293462]" asChild>
+            <Link href="/docs"><FileCode className="mr-2 w-5 h-5" /> Tài liệu API</Link>
           </Button>
         </div>
       </section>

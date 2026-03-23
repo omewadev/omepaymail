@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Save, Shield, Copy, FileCode, Globe, Code2, Hash, Loader2 } from "lucide-react";
+import { Save, Shield, Copy, FileCode, Globe, Code2, Hash, Loader2, BookOpen } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import Link from "next/link";
 import { useUser, useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase";
 import { collection, query, limit, doc } from "firebase/firestore";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -177,11 +178,23 @@ export default function SettingsPage() {
         </Card>
 
         <Card className="border-none shadow-md">
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between pb-4">
             <CardTitle className="text-lg flex items-center gap-2">
               <Code2 className="w-5 h-5 text-accent" /> 
-              Hướng dẫn tích hợp
+              Tài liệu & Hướng dẫn
             </CardTitle>
+            <div className="flex items-center gap-2">
+              <Button asChild variant="ghost" size="sm" className="font-bold text-muted-foreground hover:text-primary">
+                <Link href="/docs" target="_blank">
+                  <FileCode className="w-4 h-4 mr-2" /> Tài liệu API
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="sm" className="font-bold border-primary text-primary hover:bg-primary/5">
+                <Link href="/huong-dan" target="_blank">
+                  <BookOpen className="w-4 h-4 mr-2" /> Hướng dẫn Cài đặt
+                </Link>
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="wordpress" className="w-full">
