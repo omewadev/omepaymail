@@ -141,8 +141,8 @@ function handle_paymail_webhook($request) {
             </Tabs>
           </section>
 
-          <div className="bg-accent/5 p-8 rounded-2xl border border-accent/10 flex items-center justify-between gap-6">
-            <div className="space-y-1">
+          <div className="bg-accent/5 p-8 rounded-2xl border border-accent/10 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6"> {/* Thêm flex-col md:flex-row và điều chỉnh gap */}
+            <div className="space-y-1 text-center md:text-left"> {/* Thêm text-center md:text-left */}
               <h3 className="text-xl font-bold text-primary">Sẵn sàng để tự động hóa?</h3>
               <p className="text-sm text-muted-foreground">Đăng ký ngay để bắt đầu nhận thông báo thanh toán tức thì.</p>
             </div>

@@ -23,12 +23,12 @@ export default function IntegrationGuidePage() {
       </nav>
 
       {/* Main Content */}
-      <main className="max-w-3xl mx-auto py-12 px-6">
+      <main className="max-w-3xl mx-auto py-8 md:py-12 px-4 md:px-6">
         {/* Header Section */}
         <div className="text-center space-y-4 mb-10">
-          <h1 className="text-3xl md:text-4xl font-headline font-bold text-primary">
+          <h1 className="text-3xl sm:text-4xl font-headline font-bold text-primary">
             Hướng dẫn cài đặt tự động hóa thanh toán
-            <span className="block text-accent mt-2 text-2xl">(Chỉ mất 5 phút)</span>
+            <span className="block text-accent mt-2 text-2xl md:text-3xl">(Chỉ mất 5 phút)</span>
           </h1>
           <p className="text-lg text-muted-foreground">
             Không cần biết lập trình. Chỉ cần làm theo đúng 4 bước dưới đây, website của bạn sẽ tự động chốt đơn khi có tiền về.

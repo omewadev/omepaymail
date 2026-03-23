@@ -183,20 +183,20 @@ export default function Home() {
           <div className="w-8 h-8 rounded-lg bg-[#293462] flex items-center justify-center text-white font-bold text-xl">P</div>
           <span className="font-headline font-bold text-xl text-[#293462]">PayMailHook</span>
         </div>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4">
           <LanguageSwitcher />
           
           {isUserLoading ? (
             <Loader2 className="w-5 h-5 animate-spin text-[#293462]" />
           ) : !user ? (
-            <>
+            <div className="flex items-center gap-2"> {/* Thêm div để bọc các nút auth */}
               <button onClick={() => { setAuthTab("login"); setIsAuthModalOpen(true); }} className="text-sm font-medium hover:text-[#6F2DBD] transition-colors">
                 Đăng nhập
               </button>
               <Button onClick={() => { setAuthTab("register"); setIsAuthModalOpen(true); }} style={{ backgroundColor: '#6F2DBD', color: 'white' }}>
                 Đăng ký
               </Button>
-            </>
+            </div>
           ) : (
             <Button asChild style={{ backgroundColor: '#293462', color: 'white' }}>
               <Link href="/dashboard">Vào Dashboard</Link>
@@ -205,14 +205,14 @@ export default function Home() {
         </div>
       </nav>
 
-      <section className="py-24 px-8 max-w-7xl mx-auto text-center">
-        <h1 className="text-5xl md:text-7xl font-headline font-extrabold text-[#293462] mb-6 tracking-tight">
+      <section className="py-20 md:py-24 px-4 md:px-8 max-w-7xl mx-auto text-center">
+        <h1 className="text-4xl sm:text-5xl md:text-7xl font-headline font-extrabold text-[#293462] mb-6 tracking-tight">
           Cổng thanh toán tự động qua <span style={{ color: '#6F2DBD' }}>Gmail</span>
         </h1>
-        <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
+        <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
           Cầu nối giữa thông báo ngân hàng và website của bạn. Tự động hóa duyệt đơn hàng cho WordPress và mọi nền tảng Web khác chỉ trong vài phút.
         </p>
-        <div className="flex items-center justify-center gap-4">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4"> {/* Thêm flex-col sm:flex-row */}
           {user ? (
             <Button size="lg" asChild className="px-8 h-14 text-lg" style={{ backgroundColor: '#293462', color: 'white' }}>
               <Link href="/dashboard">Bắt đầu ngay <ArrowRight className="ml-2 w-5 h-5" /></Link>

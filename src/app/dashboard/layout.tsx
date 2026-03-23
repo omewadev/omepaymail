@@ -1,14 +1,15 @@
 
 "use client";
 
-import { SidebarProvider, SidebarInset, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarGroup, SidebarGroupLabel, SidebarFooter } from "@/components/ui/sidebar";
-import { LayoutDashboard, Webhook, Settings, Mail, LogOut, CreditCard, ShieldCheck, History } from "lucide-react";
+import { SidebarProvider, SidebarInset, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarGroup, SidebarGroupLabel, SidebarFooter, SidebarTrigger } from "@/components/ui/sidebar";
+import { LayoutDashboard, Webhook, Settings, Mail, LogOut, CreditCard, ShieldCheck, History, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useFirebase, useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { doc } from "firebase/firestore";
+import { Button } from "@/components/ui/button"; // Thêm dòng import này
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { auth } = useFirebase();
@@ -35,15 +36,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <SidebarProvider>
       <Sidebar collapsible="icon" className="border-r border-border bg-white">
-        <SidebarHeader className="h-16 flex items-center px-6 border-b border-border">
-          <div className="flex items-center gap-2">
+      <SidebarHeader className="h-16 flex items-center px-6 border-b border-border">
+          <Link href="/dashboard" className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold text-xl">
               P
             </div>
             <span className="font-headline font-bold text-lg tracking-tight group-data-[collapsible=icon]:hidden">
               PayMailHook
             </span>
-          </div>
+            </Link>
         </SidebarHeader>
         <SidebarContent className="py-4">
           <SidebarGroup>
@@ -128,9 +129,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </SidebarFooter>
       </Sidebar>
       <SidebarInset className="bg-background">
-        <header className="h-16 border-b border-border bg-white flex items-center justify-between px-8 sticky top-0 z-10">
-          <h1 className="text-xl font-headline font-bold text-primary">Bảng điều khiển</h1>
-          <div className="flex items-center gap-4">
+        <header className="h-16 border-b border-border bg-white flex items-center justify-between px-4 md:px-8 sticky top-0 z-10">
+          <div className="flex items-center gap-1">
+            <Button onClick={() => router.back()} variant="ghost" size="icon" className="md:hidden">
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <SidebarTrigger className="md:hidden" />
+            <h1 className="text-lg md:text-xl font-headline font-bold text-primary truncate hidden sm:block">Bảng điều khiển</h1>
+          </div>
+          <div className="flex items-center gap-2 md:gap-4">
             <LanguageSwitcher />
             <div className="text-right mr-2 hidden sm:block">
               <p className="text-sm font-bold">Người dùng App</p>
@@ -140,8 +147,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               AU
             </div>
           </div>
-        </header>
-        <main className="p-8">
+          </header>
+        <main className="p-4 md:p-8">
           {children}
         </main>
       </SidebarInset>
