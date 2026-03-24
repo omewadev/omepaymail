@@ -26,25 +26,30 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const to = body.to as string; 
-    const rawEmail = body.rawEmail || body.text; 
+    // [FIX 1] Xử lý an toàn payload từ nhiều dịch vụ Email Routing khác nhau
+    const toField = body.to || body.recipient || ''; 
+    const to = Array.isArray(toField) ? toField.join(',') : String(toField);
+    const rawEmail = body.rawEmail || body.email || body.text || ''; 
     
-    if (!to || !rawEmail) {
-      return NextResponse.json({ error: 'Missing required fields (to, rawEmail)' }, { status: 400 });
+    if (!rawEmail) {
+      return NextResponse.json({ error: 'Missing required field (rawEmail)' }, { status: 400 });
     }
 
     let text = "";
+    let parsedTo = "";
     try {
       const parser = new PostalMime();
       const parsedEmail = await parser.parse(rawEmail);
       text = parsedEmail.text || parsedEmail.html || rawEmail;
+      parsedTo = parsedEmail.to?.map(t => t.address).join(',') || '';
     } catch (e) {
       text = rawEmail;
     }
 
-    // Lấy UID từ địa chỉ email nhận (inbound+UID@omewa.vn)
-    const uidMatch = to.match(/inbound\+([^@]+)@/i);
-    const uid = uidMatch ? uidMatch[1] : null;
+    // [FIX 2] Lấy UID chính xác từ header gốc của email
+    const searchTo = parsedTo || to || text; 
+    const uidMatch = searchTo.match(/inbound\+([^@>"\s]+)@/i);
+    const uid = uidMatch ? uidMatch[1].trim() : null;
 
     // =====================================================================
     // LUỒNG XỬ LÝ THANH TOÁN NỘI BỘ (ADMIN NHẬN TIỀN NÂNG CẤP) - GIỮ NGUYÊN
@@ -84,54 +89,70 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, message: 'Admin email received but no upgrade syntax found' });
     }
 
+   // =====================================================================
+    // TẦNG 1: LỌC EMAIL XÁC NHẬN (UNIVERSAL CONFIRMATION CATCHER - HYBRID)
     // =====================================================================
-    // TẦNG 1: LỌC EMAIL XÁC NHẬN (UNIVERSAL CONFIRMATION CATCHER)
-    // =====================================================================
-    // Nhận diện ý định xác nhận từ bất kỳ nhà cung cấp nào (Gmail, Outlook, Custom Server...)
     const isConfirmationIntent = text.match(/(forwarding-noreply|đã yêu cầu tự động chuyển tiếp|has requested to automatically forward|xác nhận|confirmation|verify)/i);
     
     if (isConfirmationIntent) {
       let linkClicked = false;
       let otpCode = null;
-
-      // Hành động 1: Dùng AI đọc hiểu ngữ cảnh để tìm ĐÚNG link xác nhận (Tránh bẫy Link Hủy)
       let targetLink = null;
-      try {
-        const { output } = await ai.generate({
-          prompt: `Đọc email sau. Tìm đường link HTTPS dùng để XÁC NHẬN (CONFIRM/APPROVE/VERIFY) yêu cầu chuyển tiếp email. TUYỆT ĐỐI BỎ QUA các link dùng để HỦY (CANCEL/DENY), link hỗ trợ (support), hoặc link ảnh. Trả về JSON chứa key "confirmUrl". Nếu không thấy, trả về null.\n\nNội dung Email:\n${text}`,
-          output: { schema: z.object({ confirmUrl: z.string().nullable() }) }
-        });
-        targetLink = output?.confirmUrl;
-      } catch (aiErr) {
-        console.error('[Tier 1] AI failed to extract confirmation link:', aiErr);
-        // Fallback an toàn: Nếu AI lỗi/quá tải, dùng Regex bắt cứng link 'vf-' (verify forward) của riêng Gmail
-        const gmailSafeMatch = text.match(/(https:\/\/mail-settings\.google\.com\/mail\/vf-[^\s"<>]+)/);
-        if (gmailSafeMatch) targetLink = gmailSafeMatch[1];
+
+      // [HYBRID BƯỚC 1] FAST-TRACK: Thử dùng Regex bắt nhanh cho Gmail (Tốc độ 10ms)
+      const gmailOtpMatch = text.match(/(?:Mã xác nhận|Confirmation code|Mã xác minh)[\s:-]*([0-9]{8,10})/i);
+      const gmailLinkMatch = text.match(/(https:\/\/(?:mail|mail-settings)\.google\.com\/mail\/vf-[^\s"<>]+)/);
+      
+      if (gmailOtpMatch) otpCode = gmailOtpMatch[1];
+      if (gmailLinkMatch) targetLink = gmailLinkMatch[1];
+
+      //[HYBRID BƯỚC 2] SMART-TRACK: Nếu không phải Gmail (Zoho, Custom Mail...), GỌI AI ĐỂ ĐỌC HIỂU
+      if (!otpCode && !targetLink) {
+        try {
+          console.log(`[Tier 1] Non-Gmail provider detected. Calling AI for analysis...`);
+          const { output } = await ai.generate({
+            prompt: `Bạn là chuyên gia phân tích email. Đọc email xác minh chuyển tiếp (forwarding) dưới đây.
+            Nhiệm vụ:
+            1. Tìm mã OTP (thường là chuỗi số).
+            2. Tìm đường link HTTPS dùng để XÁC NHẬN (CONFIRM/APPROVE/VERIFY). 
+            TUYỆT ĐỐI BỎ QUA các link dùng để HỦY (CANCEL/DENY), link hỗ trợ (support), hoặc link ảnh.
+            Trả về JSON. Nếu không thấy, trả về null.
+            
+            Nội dung Email:\n${text}`,
+            output: { 
+              schema: z.object({ 
+                otp: z.string().nullable(), 
+                confirmUrl: z.string().nullable() 
+              }) 
+            }
+          });
+          
+          otpCode = output?.otp || null;
+          targetLink = output?.confirmUrl || null;
+        } catch (aiErr) {
+          console.error('[Tier 1] AI failed to extract confirmation data:', aiErr);
+        }
       }
 
+      //[HÀNH ĐỘNG] Click Link Xác nhận (Nếu có)
       if (targetLink) {
         try {
-          const confirmUrl = targetLink.replace(/&amp;/g, '&');
-          await fetch(confirmUrl, { method: 'GET', signal: AbortSignal.timeout(8000) });
-          linkClicked = true;
-          console.log(`[Tier 1] Auto-clicked AI-verified link: ${confirmUrl}`);
+          const confirmUrl = targetLink.replace(/&amp;/g, '&').replace(/&quot;/g, '');
+          const response = await fetch(confirmUrl, { 
+            method: 'GET', 
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+            signal: AbortSignal.timeout(8000) 
+          });
+          if (response.ok) {
+            linkClicked = true;
+            console.log(`[Tier 1] Auto-clicked verified link: ${confirmUrl}`);
+          }
         } catch (err) {
           console.error('[Tier 1] Auto-click link failed:', err);
         }
       }
 
-      // Hành động 2: Bóc tách mã OTP (Giữ nguyên logic Regex mạnh mẽ)
-      const otpMatch = text.match(/(?:Mã xác nhận|Confirmation code)[\s:]*([0-9]{8,10})/i);
-      if (otpMatch && otpMatch[1]) {
-        otpCode = otpMatch[1];
-      } else {
-        const fallbackMatch = text.match(/\b([0-9]{8,10})\b/);
-        if (fallbackMatch && fallbackMatch[1]) {
-          otpCode = fallbackMatch[1];
-        }
-      }
-
-      // Hành động 3: Lưu mã OTP vào Database
+      //[HÀNH ĐỘNG] Lưu OTP vào Database (Nếu có)
       if (uid && otpCode) {
         try {
           await adminDb.collection('users').doc(uid).set({
@@ -144,15 +165,14 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Nếu đã click link hoặc lấy được OTP, dừng phễu tại đây (Không gọi AI)
-      if (linkClicked || otpCode) {
-        return NextResponse.json({ 
-          success: true, 
-          message: 'Tier 1: Confirmation processed',
-          linkClicked,
-          otpExtracted: !!otpCode
-        });
-      }
+      // Dừng phễu tại đây, trả về kết quả cho Webhook Sender
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Tier 1: Confirmation processed',
+        linkClicked,
+        otpExtracted: !!otpCode,
+        provider: (gmailOtpMatch || gmailLinkMatch) ? 'Gmail' : 'Other/AI'
+      });
     }
 
     // =====================================================================
