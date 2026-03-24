@@ -7,5 +7,5 @@ export const ai = genkit({
       apiKey: process.env.GOOGLE_API_KEY,
     }),
   ],
-  model: 'googleai/gemini-flash', // [FIX] Sửa lại đúng tên model mới nhất của Google
+  model: 'googleai/gemini-2.5-flash', // [FIX] Sửa lại đúng tên model mới nhất của Google
 });
