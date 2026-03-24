@@ -41,6 +41,15 @@ export async function triggerInboundTest(forwardEmail: string) {
     return { success: true };
   } catch (error: any) {
     console.error('[Test Inbound Error]', error);
-    return { success: false, error: error.message };
+    
+    // [FIX] Bắt lỗi 429 Quota Exceeded của Google Gemini để hiển thị tiếng Việt thân thiện
+    if (error.message && (error.message.includes('429') || error.message.includes('RESOURCE_EXHAUSTED'))) {
+      return { 
+        success: false, 
+        error: "Hệ thống AI đang quá tải hoặc hết hạn mức API miễn phí. Vui lòng thử lại sau ít phút hoặc kiểm tra lại Billing của Google AI Studio." 
+      };
+    }
+
+    return { success: false, error: error.message || "Có lỗi xảy ra khi kết nối AI." };
   }
 }
