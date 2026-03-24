@@ -4,9 +4,16 @@ import { adminDb } from '@/lib/firebase-admin';
 import { extractTransaction } from '@/ai/flows/extract-transaction-flow';
 import { dispatchWebhook } from '@/lib/webhook-sender';
 import PostalMime from 'postal-mime';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
+
+export const maxDuration = 30; // Tăng thời gian chờ cho AI
 
 export async function POST(req: NextRequest) {
   try {
+    // =====================================================================
+    // BẢO MẬT & PARSE EMAIL (GIỮ NGUYÊN 100%)
+    // =====================================================================
     const secret = req.nextUrl.searchParams.get('secret');
     const expectedSecret = process.env.INBOUND_WEBHOOK_SECRET || 'pmh_super_secret_2026';
 
@@ -35,66 +42,12 @@ export async function POST(req: NextRequest) {
       text = rawEmail;
     }
 
-    // =====================================================================
-    // 0. LUỒNG HYBRID: TỰ ĐỘNG CLICK LINK & BÓC TÁCH OTP GMAIL FORWARDING
-    // =====================================================================
-    if (text.includes('mail.google.com/mail/f-') || text.includes('forwarding-noreply@google.com')) {
-      let otpCode = null;
-      let linkClicked = false;
-
-      // Lấy UID từ địa chỉ email nhận (inbound+UID@omewa.vn)
-      const uidMatch = to.match(/inbound\+([^@]+)@/i);
-      const uid = uidMatch ? uidMatch[1] : null;
-
-      // Hành động 1: Tìm và tự động Click Link xác nhận
-      const confirmLinkMatch = text.match(/(https:\/\/mail\.google\.com\/mail\/f-[^\s"']+)/);
-      if (confirmLinkMatch && confirmLinkMatch[1]) {
-        try {
-          const confirmUrl = confirmLinkMatch[1].replace(/&amp;/g, '&');
-          await fetch(confirmUrl, { method: 'GET' });
-          linkClicked = true;
-          console.log(`[Gmail Forwarding] Auto-clicked link for: ${to}`);
-        } catch (err) {
-          console.error('[Gmail Forwarding] Auto-click link failed:', err);
-        }
-      }
-
-      // Hành động 2: Bóc tách mã OTP (Confirmation code)
-      const otpMatch = text.match(/(?:Mã xác nhận|Confirmation code)[\s:]*([0-9]{8,10})/i);
-      if (otpMatch && otpMatch[1]) {
-        otpCode = otpMatch[1];
-      } else {
-        const fallbackMatch = text.match(/\b([0-9]{8,10})\b/);
-        if (fallbackMatch && fallbackMatch[1]) {
-          otpCode = fallbackMatch[1];
-        }
-      }
-
-      // Hành động 3: Lưu mã OTP vào Database để Frontend hiển thị cho User
-      if (uid && otpCode) {
-        try {
-          // Ghi chú: Cần đảm bảo collection 'users' tồn tại
-          await adminDb.collection('users').doc(uid).set({
-            latestGmailForwardingOtp: otpCode,
-            otpUpdatedAt: new Date().toISOString()
-          }, { merge: true }); // Dùng set + merge để tạo mới nếu chưa có
-          console.log(`[Gmail Forwarding] Saved OTP ${otpCode} for user ${uid}`);
-        } catch (dbErr) {
-          console.error(`[Gmail Forwarding] Failed to save OTP for user ${uid}:`, dbErr);
-        }
-      }
-
-      // Trả về 200 OK để kết thúc luồng, không cho chạy tiếp xuống dưới
-      return NextResponse.json({ 
-        success: true, 
-        message: 'Gmail forwarding processed (Hybrid)',
-        linkClicked,
-        otpExtracted: !!otpCode
-      });
-    }
+    // Lấy UID từ địa chỉ email nhận (inbound+UID@omewa.vn)
+    const uidMatch = to.match(/inbound\+([^@]+)@/i);
+    const uid = uidMatch ? uidMatch[1] : null;
 
     // =====================================================================
-    // 1. LUỒNG XỬ LÝ THANH TOÁN NỘI BỘ (ADMIN NHẬN TIỀN NÂNG CẤP)
+    // LUỒNG XỬ LÝ THANH TOÁN NỘI BỘ (ADMIN NHẬN TIỀN NÂNG CẤP) - GIỮ NGUYÊN
     // =====================================================================
     const sysSettingsSnap = await adminDb.collection('system_settings').doc('general').get();
     const sysSettings = sysSettingsSnap.data();
@@ -132,14 +85,83 @@ export async function POST(req: NextRequest) {
     }
 
     // =====================================================================
-    // 2. LUỒNG XỬ LÝ WEBHOOK CHO CUSTOMER (KHÁCH HÀNG NHẬN TIỀN)
+    // TẦNG 1: LỌC EMAIL XÁC NHẬN (UNIVERSAL CONFIRMATION CATCHER)
     // =====================================================================
-    const uidMatch = to.match(/inbound\+([^@]+)@/i);
-    if (!uidMatch || !uidMatch[1]) {
+    // Nhận diện ý định xác nhận từ bất kỳ nhà cung cấp nào (Gmail, Outlook, Custom Server...)
+    const isConfirmationIntent = text.match(/(forwarding-noreply|đã yêu cầu tự động chuyển tiếp|has requested to automatically forward|xác nhận|confirmation|verify)/i);
+    
+    if (isConfirmationIntent) {
+      let linkClicked = false;
+      let otpCode = null;
+
+      // Hành động 1: Dùng AI đọc hiểu ngữ cảnh để tìm ĐÚNG link xác nhận (Tránh bẫy Link Hủy)
+      let targetLink = null;
+      try {
+        const { output } = await ai.generate({
+          prompt: `Đọc email sau. Tìm đường link HTTPS dùng để XÁC NHẬN (CONFIRM/APPROVE/VERIFY) yêu cầu chuyển tiếp email. TUYỆT ĐỐI BỎ QUA các link dùng để HỦY (CANCEL/DENY), link hỗ trợ (support), hoặc link ảnh. Trả về JSON chứa key "confirmUrl". Nếu không thấy, trả về null.\n\nNội dung Email:\n${text}`,
+          output: { schema: z.object({ confirmUrl: z.string().nullable() }) }
+        });
+        targetLink = output?.confirmUrl;
+      } catch (aiErr) {
+        console.error('[Tier 1] AI failed to extract confirmation link:', aiErr);
+        // Fallback an toàn: Nếu AI lỗi/quá tải, dùng Regex bắt cứng link 'vf-' (verify forward) của riêng Gmail
+        const gmailSafeMatch = text.match(/(https:\/\/mail-settings\.google\.com\/mail\/vf-[^\s"<>]+)/);
+        if (gmailSafeMatch) targetLink = gmailSafeMatch[1];
+      }
+
+      if (targetLink) {
+        try {
+          const confirmUrl = targetLink.replace(/&amp;/g, '&');
+          await fetch(confirmUrl, { method: 'GET', signal: AbortSignal.timeout(8000) });
+          linkClicked = true;
+          console.log(`[Tier 1] Auto-clicked AI-verified link: ${confirmUrl}`);
+        } catch (err) {
+          console.error('[Tier 1] Auto-click link failed:', err);
+        }
+      }
+
+      // Hành động 2: Bóc tách mã OTP (Giữ nguyên logic Regex mạnh mẽ)
+      const otpMatch = text.match(/(?:Mã xác nhận|Confirmation code)[\s:]*([0-9]{8,10})/i);
+      if (otpMatch && otpMatch[1]) {
+        otpCode = otpMatch[1];
+      } else {
+        const fallbackMatch = text.match(/\b([0-9]{8,10})\b/);
+        if (fallbackMatch && fallbackMatch[1]) {
+          otpCode = fallbackMatch[1];
+        }
+      }
+
+      // Hành động 3: Lưu mã OTP vào Database
+      if (uid && otpCode) {
+        try {
+          await adminDb.collection('users').doc(uid).set({
+            latestGmailForwardingOtp: otpCode,
+            otpUpdatedAt: new Date().toISOString()
+          }, { merge: true });
+          console.log(`[Tier 1] Saved OTP ${otpCode} for user ${uid}`);
+        } catch (dbErr) {
+          console.error(`[Tier 1] Failed to save OTP for user ${uid}:`, dbErr);
+        }
+      }
+
+      // Nếu đã click link hoặc lấy được OTP, dừng phễu tại đây (Không gọi AI)
+      if (linkClicked || otpCode) {
+        return NextResponse.json({ 
+          success: true, 
+          message: 'Tier 1: Confirmation processed',
+          linkClicked,
+          otpExtracted: !!otpCode
+        });
+      }
+    }
+
+    // =====================================================================
+    // KIỂM TRA USER & HẠN MỨC TRƯỚC KHI GỌI AI (GIỮ NGUYÊN 100%)
+    // =====================================================================
+    if (!uid) {
       return NextResponse.json({ error: 'Invalid routing address' }, { status: 400 });
     }
     
-    const uid = uidMatch[1];
     const userRef = adminDb.collection('users').doc(uid);
     const userDoc = await userRef.get();
     
@@ -153,28 +175,54 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Transaction limit reached' }, { status: 403 });
     }
 
-    const webhookConfigSnap = await adminDb.collection('users').doc(uid).collection('webhookConfigurations').limit(1).get();
+    const webhookConfigSnap = await userRef.collection('webhookConfigurations').limit(1).get();
     const referencePrefix = webhookConfigSnap.empty ? 'TT' : webhookConfigSnap.docs[0].data().referencePrefix;
 
+    // =====================================================================
+    // TẦNG 2, 3, 4: GỌI AI ĐỂ PHÂN TÍCH GIAO DỊCH
+    // =====================================================================
     try {
       const extractedData = await extractTransaction({
         emailBody: text,
         referencePrefix: referencePrefix
       });
 
-      if (extractedData.referenceCode) {
-        const webhookSuccess = await dispatchWebhook(uid, extractedData);
-        if (webhookSuccess) {
-          await userRef.update({
-            transactionCount: admin.firestore.FieldValue.increment(1)
+      // Nếu AI tìm thấy số tiền (Chắc chắn là email biến động số dư)
+      if (extractedData && extractedData.amount > 0) {
+        
+        if (extractedData.referenceCode) {
+          // TẦNG 2: GIAO DỊCH HỢP LỆ (Có tiền + Có Prefix) -> Bắn Webhook
+          const webhookSuccess = await dispatchWebhook(uid, extractedData);
+          if (webhookSuccess) {
+            await userRef.update({
+              transactionCount: admin.firestore.FieldValue.increment(1)
+            });
+          }
+          return NextResponse.json({ success: true, message: 'Tier 2: Valid transaction processed' });
+        
+        } else {
+          // TẦNG 3: GIAO DỊCH SAI CÚ PHÁP (Có tiền + KHÔNG có Prefix)
+          // KHÔNG bắn Webhook, CHỈ lưu Log cảnh báo vào Database để sếp duyệt tay
+          await userRef.collection('webhook_logs').add({
+            ...extractedData,
+            targetUrl: 'N/A',
+            isSuccess: false,
+            statusCode: 400,
+            responseBody: `Giao dịch sai cú pháp. Khách chuyển ${extractedData.amount} nhưng quên ghi tiền tố [${referencePrefix}].`,
+            createdAt: new Date().toISOString()
           });
+          return NextResponse.json({ success: true, message: 'Tier 3: Syntax error logged for manual review' });
         }
       }
+
     } catch (aiError) {
-      return NextResponse.json({ success: true, message: 'Processed with AI errors' });
+      // TẦNG 4: THÙNG RÁC (AI báo lỗi vì không tìm thấy số tiền, ví dụ: email quảng cáo, email rác)
+      console.log(`[Tier 4] Trash email ignored for user ${uid}`);
+      return NextResponse.json({ success: true, message: 'Tier 4: Unprocessable email ignored' });
     }
 
-    return NextResponse.json({ success: true, message: 'Email processed successfully' });
+    // Fallback an toàn
+    return NextResponse.json({ success: true, message: 'Email processed' });
 
   } catch (error: any) {
     console.error('[Inbound Webhook Error]', error);

@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview Genkit Flow to extract transaction details with dynamic reference prefixes.
@@ -41,11 +40,10 @@ Email Content:
 """
 
 Rules:
-1. Scan for any alphanumeric pattern that starts with "{{{referencePrefix}}}".
-2. This code is usually the order ID or payment description.
-3. Extract the amount.
-4. If the email describes money received, set transactionType to 'credit'.
-5. Return a valid JSON object. If no reference code starting with "{{{referencePrefix}}}" is found, set referenceCode to null.`,
+1. Check if this is a bank transfer notification (money received). If YES, extract the amount and set transactionType to 'credit'.
+2. Scan for any alphanumeric pattern that starts with "{{{referencePrefix}}}". This is the referenceCode.
+3. CRITICAL: If you find the amount (money received) BUT the user forgot to include the "{{{referencePrefix}}}" code in the transfer description, you MUST STILL return the amount, senderName, and timestamp, but set referenceCode to null.
+4. Return a valid JSON object.`,
 });
 
 const extractTransactionFlow = ai.defineFlow(
