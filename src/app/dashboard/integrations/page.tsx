@@ -4,27 +4,38 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Mail, ShieldCheck, Zap, Globe, Copy, Info, Send, Loader2, AlertTriangle, BookOpen } from "lucide-react";
-import { useUser } from "@/firebase";
+import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase"; // Thêm useDoc và useMemoFirebase
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { triggerInboundTest } from "@/app/actions/test-inbound";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { doc } from "firebase/firestore"; // Thêm doc
 
 export default function IntegrationsPage() {
   const { user } = useUser();
+  const firestore = useFirestore();
   const { toast } = useToast();
   const[isTesting, setIsTesting] = useState(false);
   
   // Tạo địa chỉ email ảo dựa trên UID của user (Đã cập nhật theo Cloudflare Routing)
   const forwardEmail = user?.uid ? `inbound+${user.uid}@omewa.vn` : "Đang tải...";
 
-  const copyToClipboard = () => {
-    if (!user?.uid) return;
-    navigator.clipboard.writeText(forwardEmail);
+  // Lấy thông tin user profile để hiển thị OTP
+  const userProfileRef = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return doc(firestore, "users", user.uid);
+  }, [firestore, user?.uid]);
+  const { data: userProfile, isLoading: isLoadingUserProfile } = useDoc(userProfileRef);
+  const latestOtp = userProfile?.latestGmailForwardingOtp;
+  const otpUpdatedAt = userProfile?.otpUpdatedAt;
+
+  const copyToClipboard = (text: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
     toast({
       title: "Đã sao chép",
-      description: "Địa chỉ email chuyển tiếp đã được lưu vào bộ nhớ tạm.",
+      description: "Đã lưu vào bộ nhớ tạm.",
     });
   };
 
@@ -49,6 +60,8 @@ export default function IntegrationsPage() {
       setIsTesting(false);
     }
   };
+
+  if (isLoadingUserProfile) return <div className="p-8 text-center"><Loader2 className="animate-spin mx-auto w-8 h-8 text-accent" /></div>;
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -88,7 +101,7 @@ export default function IntegrationsPage() {
                 <p className="text-lg font-mono text-green-400 truncate">{forwardEmail}</p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <Button onClick={copyToClipboard} className="bg-accent hover:bg-accent/90">
+                <Button onClick={() => copyToClipboard(forwardEmail)} className="bg-accent hover:bg-accent/90">
                   <Copy className="w-4 h-4 mr-2" /> Sao chép
                 </Button>
                 <Button onClick={handleTestInbound} disabled={isTesting} variant="outline" className="text-slate-900">
@@ -97,6 +110,23 @@ export default function IntegrationsPage() {
                 </Button>
               </div>
             </div>
+
+            {/* NEW: Display OTP section */}
+            {latestOtp && (
+              <Alert className="bg-blue-50 border-blue-200">
+                <Info className="h-4 w-4 text-blue-600" />
+                <AlertTitle className="text-blue-800 font-bold text-sm">Mã xác nhận Gmail của bạn</AlertTitle>
+                <AlertDescription className="text-blue-700 text-xs mt-1 flex items-center justify-between">
+                  <span className="font-mono text-base font-bold">{latestOtp}</span>
+                  <Button variant="ghost" size="sm" onClick={() => copyToClipboard(latestOtp)} className="text-blue-600 hover:bg-blue-100">
+                    <Copy className="w-3 h-3 mr-1" /> Sao chép mã
+                  </Button>
+                </AlertDescription>
+                {otpUpdatedAt && (
+                  <p className="text-xs text-blue-500 mt-2">Cập nhật lúc: {new Date(otpUpdatedAt).toLocaleString()}</p>
+                )}
+              </Alert>
+            )}
 
             <div className="space-y-6">
               <h4 className="font-bold text-lg text-primary flex items-center gap-2">

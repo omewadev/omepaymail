@@ -20,7 +20,6 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const to = body.to as string; 
-    // Chấp nhận cả rawEmail (từ Cloudflare/Test) hoặc text (từ code cũ)
     const rawEmail = body.rawEmail || body.text; 
     
     if (!to || !rawEmail) {
@@ -34,6 +33,64 @@ export async function POST(req: NextRequest) {
       text = parsedEmail.text || parsedEmail.html || rawEmail;
     } catch (e) {
       text = rawEmail;
+    }
+
+    // =====================================================================
+    // 0. LUỒNG HYBRID: TỰ ĐỘNG CLICK LINK & BÓC TÁCH OTP GMAIL FORWARDING
+    // =====================================================================
+    if (text.includes('mail.google.com/mail/f-') || text.includes('forwarding-noreply@google.com')) {
+      let otpCode = null;
+      let linkClicked = false;
+
+      // Lấy UID từ địa chỉ email nhận (inbound+UID@omewa.vn)
+      const uidMatch = to.match(/inbound\+([^@]+)@/i);
+      const uid = uidMatch ? uidMatch[1] : null;
+
+      // Hành động 1: Tìm và tự động Click Link xác nhận
+      const confirmLinkMatch = text.match(/(https:\/\/mail\.google\.com\/mail\/f-[^\s"']+)/);
+      if (confirmLinkMatch && confirmLinkMatch[1]) {
+        try {
+          const confirmUrl = confirmLinkMatch[1].replace(/&amp;/g, '&');
+          await fetch(confirmUrl, { method: 'GET' });
+          linkClicked = true;
+          console.log(`[Gmail Forwarding] Auto-clicked link for: ${to}`);
+        } catch (err) {
+          console.error('[Gmail Forwarding] Auto-click link failed:', err);
+        }
+      }
+
+      // Hành động 2: Bóc tách mã OTP (Confirmation code)
+      const otpMatch = text.match(/(?:Mã xác nhận|Confirmation code)[\s:]*([0-9]{8,10})/i);
+      if (otpMatch && otpMatch[1]) {
+        otpCode = otpMatch[1];
+      } else {
+        const fallbackMatch = text.match(/\b([0-9]{8,10})\b/);
+        if (fallbackMatch && fallbackMatch[1]) {
+          otpCode = fallbackMatch[1];
+        }
+      }
+
+      // Hành động 3: Lưu mã OTP vào Database để Frontend hiển thị cho User
+      if (uid && otpCode) {
+        try {
+          // Ghi chú: Cần đảm bảo collection 'users' tồn tại
+          await adminDb.collection('users').doc(uid).set({
+            latestGmailForwardingOtp: otpCode,
+            otpUpdatedAt: new Date().toISOString()
+          }, { merge: true }); // Dùng set + merge để tạo mới nếu chưa có
+          console.log(`[Gmail Forwarding] Saved OTP ${otpCode} for user ${uid}`);
+        } catch (dbErr) {
+          console.error(`[Gmail Forwarding] Failed to save OTP for user ${uid}:`, dbErr);
+        }
+      }
+
+      // Trả về 200 OK để kết thúc luồng, không cho chạy tiếp xuống dưới
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Gmail forwarding processed (Hybrid)',
+        linkClicked,
+        otpExtracted: !!otpCode
+      });
     }
 
     // =====================================================================

@@ -553,12 +553,20 @@ const SidebarMenuButton = React.forwardRef<
       size = "default",
       tooltip,
       className,
+      onClick, // Lấy onClick gốc
       ...props
     },
     ref
   ) => {
     const Comp = asChild ? Slot : "button"
-    const { isMobile, state } = useSidebar()
+    const { isMobile, state, setOpenMobile } = useSidebar() // Thêm setOpenMobile
+
+    const handleClick = (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+      onClick?.(event); // Gọi onClick gốc
+      if (isMobile) {
+        setOpenMobile(false); // Đóng sidebar trên mobile
+      }
+    };
 
     const button = (
       <Comp
@@ -567,6 +575,7 @@ const SidebarMenuButton = React.forwardRef<
         data-size={size}
         data-active={isActive}
         className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
+        onClick={handleClick} // Sử dụng hàm handleClick mới
         {...props}
       />
     )
