@@ -72,8 +72,8 @@ export async function POST(req: NextRequest) {
           const emailsRef = adminDb.collection('users').doc(uid).collection('emails');
           await emailsRef.add(emailData);
 
-          // Tự động dọn dẹp: Chỉ giữ lại 50 email mới nhất để tiết kiệm chi phí Firestore
-          const oldEmailsSnap = await emailsRef.orderBy('receivedAt', 'desc').offset(50).get();
+          // Tự động dọn dẹp: Chỉ giữ lại 1000 email mới nhất theo yêu cầu
+          const oldEmailsSnap = await emailsRef.orderBy('receivedAt', 'desc').offset(1000).get();
           if (!oldEmailsSnap.empty) {
             const batch = adminDb.batch();
             oldEmailsSnap.docs.forEach(doc => batch.delete(doc.ref));
