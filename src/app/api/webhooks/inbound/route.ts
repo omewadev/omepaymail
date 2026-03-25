@@ -133,12 +133,21 @@ export async function POST(req: NextRequest) {
       let otpCode = null;
       let targetLink = null;
 
+      // Làm sạch text: Xóa các dấu xuống dòng bị ngắt quãng giữa chừng làm đứt link
+      const cleanText = text.replace(/=\r?\n/g, '').replace(/\s+/g, ' ');
+
       // [HYBRID BƯỚC 1] FAST-TRACK: Thử dùng Regex bắt nhanh cho Gmail (Tốc độ 10ms)
-      const gmailOtpMatch = text.match(/(?:Mã xác nhận|Confirmation code|Mã xác minh)[\s:-]*([0-9]{8,10})/i);
-      const gmailLinkMatch = text.match(/(https:\/\/(?:mail|mail-settings)\.google\.com\/mail\/vf-[^\s"<>]+)/);
+      const gmailOtpMatch = cleanText.match(/(?:Mã xác nhận|Confirmation code|Mã xác minh)[\s:-]*([0-9]{8,10})/i);
+      // Cập nhật Regex: Bắt mọi subdomain của google.com/mail/vf- và tự động thêm https:// nếu thiếu
+      const gmailLinkMatch = cleanText.match(/(?:https:\/\/)?(?:[a-zA-Z0-9.-]*google\.com\/mail\/vf-[a-zA-Z0-9%_-]+)/i);
       
       if (gmailOtpMatch) otpCode = gmailOtpMatch[1];
-      if (gmailLinkMatch) targetLink = gmailLinkMatch[1];
+      if (gmailLinkMatch) {
+        targetLink = gmailLinkMatch[0];
+        if (!targetLink.startsWith('http')) {
+          targetLink = 'https://' + targetLink;
+        }
+      }
 
       //[HYBRID BƯỚC 2] SMART-TRACK: Nếu không phải Gmail (Zoho, Custom Mail...), GỌI AI ĐỂ ĐỌC HIỂU
       if (!otpCode && !targetLink) {

@@ -187,195 +187,6 @@ tsconfig.json
 <files>
 This section contains the contents of the repository's files.
 
-<file path="src/app/dashboard/inbox/page.tsx">
-"use client";
-
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Mail, MailOpen, Trash2, Loader2, Inbox, Clock, User as UserIcon } from "lucide-react";
-import { useUser, useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
-import { collection, query, orderBy, doc } from "firebase/firestore";
-import { format } from "date-fns";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { useToast } from "@/hooks/use-toast";
-
-export default function VirtualInboxPage() {
-  const { user } = useUser();
-  const firestore = useFirestore();
-  const { toast } = useToast();
-  
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [selectedEmail, setSelectedEmail] = useState<any | null>(null);
-  const[isSheetOpen, setIsSheetOpen] = useState(false);
-
-  const emailsQuery = useMemoFirebase(() => {
-    if (!firestore || !user?.uid) return null;
-    return query(
-      collection(firestore, "users", user.uid, "emails"),
-      orderBy("receivedAt", "desc")
-    );
-  }, [firestore, user?.uid]);
-
-  const { data: emails, isLoading } = useCollection(emailsQuery);
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleOpenEmail = (email: any) => {
-    setSelectedEmail(email);
-    setIsSheetOpen(true);
-
-    // Đánh dấu đã đọc nếu chưa đọc
-    if (!email.isRead && firestore && user?.uid) {
-      const emailRef = doc(firestore, "users", user.uid, "emails", email.id);
-      updateDocumentNonBlocking(emailRef, { isRead: true });
-    }
-  };
-
-  const handleDeleteEmail = (e: React.MouseEvent, emailId: string) => {
-    e.stopPropagation(); // Ngăn không cho click lan ra ngoài (mở mail)
-    if (!firestore || !user?.uid) return;
-    
-    const emailRef = doc(firestore, "users", user.uid, "emails", emailId);
-    deleteDocumentNonBlocking(emailRef);
-    
-    toast({
-      title: "Đã xóa",
-      description: "Email đã được xóa khỏi hộp thư.",
-    });
-
-    if (selectedEmail?.id === emailId) {
-      setIsSheetOpen(false);
-    }
-  };
-
-  if (isLoading) return <div className="p-8 text-center"><Loader2 className="animate-spin mx-auto w-8 h-8 text-accent" /></div>;
-
-  return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div>
-        <h2 className="text-3xl font-headline font-bold text-primary flex items-center gap-3">
-          <Inbox className="w-8 h-8 text-accent" /> Hộp thư ảo
-        </h2>
-        <p className="text-muted-foreground mt-1">
-          Nơi lưu trữ 50 email gần nhất được chuyển tiếp đến hệ thống. Bạn có thể xem mã OTP hoặc click link xác nhận thủ công tại đây.
-        </p>
-      </div>
-
-      <Card className="border-none shadow-sm">
-        <CardHeader className="border-b bg-slate-50/50">
-          <CardTitle className="text-lg">Danh sách Email nhận được</CardTitle>
-          <CardDescription>Tự động làm mới (Real-time)</CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          {emails && emails.length > 0 ? (
-            <div className="divide-y">
-              {emails.map((email) => (
-                <div 
-                  key={email.id} 
-                  onClick={() => handleOpenEmail(email)}
-                  className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer transition-colors hover:bg-slate-50 ${!email.isRead ? 'bg-blue-50/30' : ''}`}
-                >
-                  <div className="flex items-start gap-4 overflow-hidden">
-                    <div className="mt-1 shrink-0">
-                      {!email.isRead ? (
-                        <div className="relative">
-                          <Mail className="w-5 h-5 text-accent" />
-                          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white"></span>
-                        </div>
-                      ) : (
-                        <MailOpen className="w-5 h-5 text-slate-400" />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={`truncate text-sm ${!email.isRead ? 'font-bold text-slate-900' : 'font-medium text-slate-700'}`}>
-                          {email.fromName || email.from}
-                        </span>
-                        <Badge variant="secondary" className="text-[10px] font-normal shrink-0">
-                          {email.from}
-                        </Badge>
-                      </div>
-                      <p className={`truncate text-sm mb-1 ${!email.isRead ? 'font-bold text-slate-800' : 'text-slate-600'}`}>
-                        {email.subject}
-                      </p>
-                      <p className="truncate text-xs text-slate-500">
-                        {email.snippet}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between sm:flex-col sm:items-end gap-2 shrink-0">
-                    <span className="text-xs text-slate-400 whitespace-nowrap">
-                      {email.receivedAt ? format(new Date(email.receivedAt), "dd/MM/yyyy HH:mm") : ""}
-                    </span>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8 text-slate-400 hover:text-destructive hover:bg-destructive/10"
-                      onClick={(e) => handleDeleteEmail(e, email.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-20 text-muted-foreground flex flex-col items-center">
-              <Inbox className="w-12 h-12 text-slate-200 mb-4" />
-              <p>Hộp thư trống.</p>
-              <p className="text-sm mt-1">Hệ thống chưa nhận được email nào chuyển tiếp đến.</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Trình đọc Email (Sheet) */}
-      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetContent className="w-full sm:max-w-2xl p-0 flex flex-col">
-          <SheetHeader className="p-6 border-b bg-slate-50 shrink-0">
-            <div className="flex justify-between items-start gap-4">
-              <div>
-                <SheetTitle className="text-xl leading-tight mb-4">{selectedEmail?.subject}</SheetTitle>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2 text-slate-600">
-                    <UserIcon className="w-4 h-4" />
-                    <span className="font-bold text-slate-900">{selectedEmail?.fromName || 'Unknown'}</span>
-                    <span>&lt;{selectedEmail?.from}&gt;</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-slate-500">
-                    <Clock className="w-4 h-4" />
-                    <span>{selectedEmail?.receivedAt ? format(new Date(selectedEmail.receivedAt), "dd/MM/yyyy HH:mm:ss") : ""}</span>
-                  </div>
-                </div>
-              </div>
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className="shrink-0 text-destructive hover:bg-destructive/10 border-destructive/20"
-                onClick={(e) => selectedEmail && handleDeleteEmail(e, selectedEmail.id)}
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </div>
-          </SheetHeader>
-          
-          <ScrollArea className="flex-1 p-6">
-            {/* CẢNH BÁO: Render HTML trực tiếp từ Email. Đã bọc trong class prose để format đẹp hơn */}
-            <div 
-              className="prose prose-sm sm:prose-base max-w-none prose-a:text-blue-600 hover:prose-a:text-blue-800 break-words"
-              dangerouslySetInnerHTML={{ __html: selectedEmail?.bodyHtml || '<p>Không có nội dung</p>' }}
-            />
-          </ScrollArea>
-        </SheetContent>
-      </Sheet>
-    </div>
-  );
-}
-</file>
-
 <file path=".idx/dev.nix">
 # To learn more about how to use Nix to configure your environment
 # see: https://firebase.google.com/docs/studio/customize-workspace
@@ -791,6 +602,195 @@ export default function AdminSettingsPage() {
           </Button>
         </CardFooter>
       </Card>
+    </div>
+  );
+}
+</file>
+
+<file path="src/app/dashboard/inbox/page.tsx">
+"use client";
+
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Mail, MailOpen, Trash2, Loader2, Inbox, Clock, User as UserIcon } from "lucide-react";
+import { useUser, useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
+import { collection, query, orderBy, doc } from "firebase/firestore";
+import { format } from "date-fns";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
+
+export default function VirtualInboxPage() {
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [selectedEmail, setSelectedEmail] = useState<any | null>(null);
+  const[isSheetOpen, setIsSheetOpen] = useState(false);
+
+  const emailsQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return query(
+      collection(firestore, "users", user.uid, "emails"),
+      orderBy("receivedAt", "desc")
+    );
+  }, [firestore, user?.uid]);
+
+  const { data: emails, isLoading } = useCollection(emailsQuery);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleOpenEmail = (email: any) => {
+    setSelectedEmail(email);
+    setIsSheetOpen(true);
+
+    // Đánh dấu đã đọc nếu chưa đọc
+    if (!email.isRead && firestore && user?.uid) {
+      const emailRef = doc(firestore, "users", user.uid, "emails", email.id);
+      updateDocumentNonBlocking(emailRef, { isRead: true });
+    }
+  };
+
+  const handleDeleteEmail = (e: React.MouseEvent, emailId: string) => {
+    e.stopPropagation(); // Ngăn không cho click lan ra ngoài (mở mail)
+    if (!firestore || !user?.uid) return;
+    
+    const emailRef = doc(firestore, "users", user.uid, "emails", emailId);
+    deleteDocumentNonBlocking(emailRef);
+    
+    toast({
+      title: "Đã xóa",
+      description: "Email đã được xóa khỏi hộp thư.",
+    });
+
+    if (selectedEmail?.id === emailId) {
+      setIsSheetOpen(false);
+    }
+  };
+
+  if (isLoading) return <div className="p-8 text-center"><Loader2 className="animate-spin mx-auto w-8 h-8 text-accent" /></div>;
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div>
+        <h2 className="text-3xl font-headline font-bold text-primary flex items-center gap-3">
+          <Inbox className="w-8 h-8 text-accent" /> Hộp thư ảo
+        </h2>
+        <p className="text-muted-foreground mt-1">
+          Nơi lưu trữ 50 email gần nhất được chuyển tiếp đến hệ thống. Bạn có thể xem mã OTP hoặc click link xác nhận thủ công tại đây.
+        </p>
+      </div>
+
+      <Card className="border-none shadow-sm">
+        <CardHeader className="border-b bg-slate-50/50">
+          <CardTitle className="text-lg">Danh sách Email nhận được</CardTitle>
+          <CardDescription>Tự động làm mới (Real-time)</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          {emails && emails.length > 0 ? (
+            <div className="divide-y">
+              {emails.map((email) => (
+                <div 
+                  key={email.id} 
+                  onClick={() => handleOpenEmail(email)}
+                  className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer transition-colors hover:bg-slate-50 ${!email.isRead ? 'bg-blue-50/30' : ''}`}
+                >
+                  <div className="flex items-start gap-4 overflow-hidden">
+                    <div className="mt-1 shrink-0">
+                      {!email.isRead ? (
+                        <div className="relative">
+                          <Mail className="w-5 h-5 text-accent" />
+                          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white"></span>
+                        </div>
+                      ) : (
+                        <MailOpen className="w-5 h-5 text-slate-400" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`truncate text-sm ${!email.isRead ? 'font-bold text-slate-900' : 'font-medium text-slate-700'}`}>
+                          {email.fromName || email.from}
+                        </span>
+                        <Badge variant="secondary" className="text-[10px] font-normal shrink-0">
+                          {email.from}
+                        </Badge>
+                      </div>
+                      <p className={`truncate text-sm mb-1 ${!email.isRead ? 'font-bold text-slate-800' : 'text-slate-600'}`}>
+                        {email.subject}
+                      </p>
+                      <p className="truncate text-xs text-slate-500">
+                        {email.snippet}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between sm:flex-col sm:items-end gap-2 shrink-0">
+                    <span className="text-xs text-slate-400 whitespace-nowrap">
+                      {email.receivedAt ? format(new Date(email.receivedAt), "dd/MM/yyyy HH:mm") : ""}
+                    </span>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-slate-400 hover:text-destructive hover:bg-destructive/10"
+                      onClick={(e) => handleDeleteEmail(e, email.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-20 text-muted-foreground flex flex-col items-center">
+              <Inbox className="w-12 h-12 text-slate-200 mb-4" />
+              <p>Hộp thư trống.</p>
+              <p className="text-sm mt-1">Hệ thống chưa nhận được email nào chuyển tiếp đến.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Trình đọc Email (Sheet) */}
+      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+        <SheetContent className="w-full sm:max-w-2xl p-0 flex flex-col">
+          <SheetHeader className="p-6 border-b bg-slate-50 shrink-0">
+            <div className="flex justify-between items-start gap-4">
+              <div>
+                <SheetTitle className="text-xl leading-tight mb-4">{selectedEmail?.subject}</SheetTitle>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2 text-slate-600">
+                    <UserIcon className="w-4 h-4" />
+                    <span className="font-bold text-slate-900">{selectedEmail?.fromName || 'Unknown'}</span>
+                    <span>&lt;{selectedEmail?.from}&gt;</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-500">
+                    <Clock className="w-4 h-4" />
+                    <span>{selectedEmail?.receivedAt ? format(new Date(selectedEmail.receivedAt), "dd/MM/yyyy HH:mm:ss") : ""}</span>
+                  </div>
+                </div>
+              </div>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="shrink-0 text-destructive hover:bg-destructive/10 border-destructive/20"
+                onClick={(e) => selectedEmail && handleDeleteEmail(e, selectedEmail.id)}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </div>
+          </SheetHeader>
+          
+          <ScrollArea className="flex-1 p-6">
+            {/* CẢNH BÁO: Render HTML trực tiếp từ Email. Đã bọc trong class prose để format đẹp hơn */}
+            <div 
+              className="prose prose-sm sm:prose-base max-w-none prose-a:text-blue-600 hover:prose-a:text-blue-800 break-words"
+              dangerouslySetInnerHTML={{ __html: selectedEmail?.bodyHtml || '<p>Không có nội dung</p>' }}
+            />
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
@@ -16322,6 +16322,124 @@ export default function BillingPage() {
 }
 </file>
 
+<file path="docs/backend.json">
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Thông tin hồ sơ người dùng bao gồm hạn mức giao dịch và gói cước.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "UID của người dùng từ Firebase Auth."
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "planName": {
+          "type": "string",
+          "enum": ["Free", "Pro", "Enterprise"]
+        },
+        "transactionLimit": {
+          "type": "number",
+          "description": "Số lượng giao dịch tối đa trong tháng."
+        },
+        "transactionCount": {
+          "type": "number",
+          "description": "Số lượng giao dịch đã thực hiện trong tháng hiện tại."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "email", "planName", "transactionLimit", "transactionCount"]
+    },
+    "PaymentGatewayConfiguration": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PaymentGatewayConfiguration",
+      "type": "object",
+      "description": "Cấu hình cổng thanh toán.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "gatewayType": { "type": "string" },
+        "apiKey": { "type": "string" },
+        "merchantId": { "type": "string" },
+        "currency": { "type": "string" },
+        "isEnabled": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "gatewayType", "merchantId", "currency", "isEnabled"]
+    },
+    "GmailListenerConfiguration": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "GmailListenerConfiguration",
+      "type": "object",
+      "description": "Cấu hình lắng nghe Gmail.",
+      "properties": {
+        "id": { "type": "string" },
+        "monitoredEmailAddress": { "type": "string", "format": "email" },
+        "bankSenderEmailPatterns": { "type": "array", "items": { "type": "string" } },
+        "confirmationKeywords": { "type": "array", "items": { "type": "string" } },
+        "isEnabled": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "monitoredEmailAddress", "isEnabled"]
+    },
+    "WebhookConfiguration": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "WebhookConfiguration",
+      "type": "object",
+      "description": "Cấu hình Webhook gửi về Merchant.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "targetUrl": { "type": "string", "format": "uri" },
+        "secretToken": { "type": "string" },
+        "referencePrefix": { "type": "string", "description": "Tiền tố mã đơn hàng (ví dụ: TT, CG, DH)." },
+        "triggerEvent": { "type": "string" },
+        "isEnabled": { "type": "boolean" },
+        "retryAttempts": { "type": "number" },
+        "retryIntervalSeconds": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "targetUrl", "isEnabled", "referencePrefix"]
+    }
+  },
+  "auth": {
+    "providers": ["password", "google.com"]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/backend/entities/UserProfile" },
+      "description": "Thông tin hồ sơ và hạn mức của người dùng."
+    },
+    "/users/{userId}/paymentGatewayConfigurations/{id}": {
+      "schema": { "$ref": "#/backend/entities/PaymentGatewayConfiguration" },
+      "description": "Cấu hình cổng thanh toán cá nhân."
+    },
+    "/users/{userId}/gmailListenerConfigurations/{id}": {
+      "schema": { "$ref": "#/backend/entities/GmailListenerConfiguration" },
+      "description": "Cấu hình Gmail Listener cá nhân."
+    },
+    "/users/{userId}/webhookConfigurations/{id}": {
+      "schema": { "$ref": "#/backend/entities/WebhookConfiguration" },
+      "description": "Cấu hình Webhook cá nhân gửi về WordPress hoặc Custom Web."
+    }
+  }
+}
+</file>
+
 <file path="src/app/dashboard/layout.tsx">
 "use client";
 
@@ -16489,6 +16607,243 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 }
 </file>
 
+<file path="src/app/dashboard/page.tsx">
+"use client";
+
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { AlertTriangle, ArrowRight, Mail, Cpu, Globe, Zap, CheckCircle2 } from "lucide-react";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
+import Link from "next/link";
+import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from "@/firebase";
+import { doc, collection, query, limit, orderBy } from "firebase/firestore";
+import { useMemo } from "react";
+
+export default function OverviewPage() {
+  const { user } = useUser();
+  const firestore = useFirestore();
+
+  const userProfileRef = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return doc(firestore, "users", user.uid);
+  }, [firestore, user?.uid]);
+
+  const { data: profile, isLoading: profileLoading } = useDoc(userProfileRef);
+
+  const webhooksQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return query(collection(firestore, "users", user.uid, "webhookConfigurations"), limit(1));
+  }, [firestore, user?.uid]);
+
+  const { data: webhooks } = useCollection(webhooksQuery);
+  const prefix = webhooks?.[0]?.referencePrefix || "TT";
+
+  // Lấy lịch sử giao dịch thực tế từ Database
+  const logsQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return query(collection(firestore, "users", user.uid, "webhook_logs"), orderBy("createdAt", "desc"), limit(100));
+  }, [firestore, user?.uid]);
+  const { data: logs } = useCollection(logsQuery);
+
+  // Xử lý dữ liệu thực tế cho biểu đồ (Gom nhóm theo thứ trong tuần)
+  const chartData = useMemo(() => {
+    const baseData =[
+      { name: 'CN', total: 0 }, { name: 'T2', total: 0 }, { name: 'T3', total: 0 },
+      { name: 'T4', total: 0 }, { name: 'T5', total: 0 }, { name: 'T6', total: 0 }, { name: 'T7', total: 0 }
+    ];
+
+    if (logs) {
+      logs.forEach(log => {
+        if (log.createdAt) {
+          const date = new Date(log.createdAt);
+          const dayIndex = date.getDay(); // 0 = CN, 1 = T2...
+          baseData[dayIndex].total += 1; // Tăng số lượng giao dịch cho ngày đó
+        }
+      });
+    }
+
+    // Sắp xếp lại mảng để T2 đứng đầu, CN đứng cuối cho thuận mắt người Việt
+    return [baseData[1], baseData[2], baseData[3], baseData[4], baseData[5], baseData[6], baseData[0]];
+  }, [logs]);
+
+  const usageCount = profile?.transactionCount || 0;
+  const limitCount = profile?.transactionLimit || 100;
+  const usagePercent = Math.round((usageCount / limitCount) * 100);
+  const isWarning = usagePercent >= 80;
+
+  if (profileLoading) return <div className="p-8">Đang tải dữ liệu...</div>;
+
+  return (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Cảnh báo hạn mức */}
+      {isWarning && (
+        <div className="bg-amber-50 border border-amber-200 p-6 rounded-xl flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4 text-amber-800">
+            <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-6 h-6 text-amber-600" />
+            </div>
+            <div>
+              <p className="font-bold text-lg">Cảnh báo: Sắp hết hạn mức giao dịch!</p>
+              <p className="text-sm opacity-80">Bạn đã sử dụng {usagePercent}% gói cước. Hãy nâng cấp để tránh gián đoạn xác nhận đơn hàng của bạn.</p>
+            </div>
+          </div>
+          <Button asChild size="lg" className="bg-amber-600 hover:bg-amber-700 text-white shadow-lg">
+            <Link href="/dashboard/billing" className="flex items-center gap-2 font-bold">
+              Gia hạn & Nâng cấp ngay <ArrowRight className="w-4 h-4" />
+            </Link>
+          </Button>
+        </div>
+      )}
+
+      {/* Sơ đồ luồng hoạt động */}
+      <Card className="border-none shadow-sm bg-slate-50 overflow-hidden">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Zap className="w-5 h-5 text-accent" />
+            Quy trình tự động hóa động
+          </CardTitle>
+          <CardDescription>Hệ thống đang tìm kiếm mã bắt đầu bằng: <Badge variant="outline" className="text-accent border-accent ml-1">{prefix}</Badge></CardDescription>
+        </CardHeader>
+        <CardContent className="pt-4">
+          <div className="grid grid-cols-1 md:grid-cols-7 gap-4 items-center">
+            {/* Bước 1: Ngân hàng */}
+            <div className="md:col-span-1 flex flex-col items-center text-center space-y-2">
+              <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center border border-slate-200">
+                <Globe className="w-6 h-6 text-blue-500" />
+              </div>
+              <span className="text-[10px] font-bold uppercase text-slate-500">Ngân hàng</span>
+            </div>
+
+            <div className="hidden md:flex md:col-span-1 justify-center">
+              <ArrowRight className="text-slate-300" />
+            </div>
+
+            {/* Bước 2: Gmail Hook */}
+            <div className="md:col-span-1 flex flex-col items-center text-center space-y-2">
+              <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center border border-slate-200">
+                <Mail className="w-6 h-6 text-red-500" />
+              </div>
+              <span className="text-[10px] font-bold uppercase text-slate-500">Gmail Hook</span>
+            </div>
+
+            <div className="hidden md:flex md:col-span-1 justify-center">
+              <ArrowRight className="text-slate-300" />
+            </div>
+
+            {/* Bước 3: AI Extract */}
+            <div className="md:col-span-1 flex flex-col items-center text-center space-y-2 relative">
+            <div className="w-16 h-16 rounded-2xl bg-accent text-white shadow-lg flex items-center justify-center animate-pulse">
+                <Cpu className="w-8 h-8" />
+              </div>
+              <span className="text-xs font-bold uppercase text-accent">AI ({prefix}xxxxxx)</span>
+              <Badge className="absolute -top-2 -right-2 bg-green-500 text-xs">Real-time</Badge>
+            </div>
+
+            <div className="hidden md:flex md:col-span-1 justify-center">
+              <ArrowRight className="text-slate-300" />
+            </div>
+
+            {/* Bước 4: Website Merchant */}
+            <div className="md:col-span-1 flex flex-col items-center text-center space-y-2">
+              <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center border border-green-200">
+                <CheckCircle2 className="w-6 h-6 text-green-500" />
+              </div>
+              <span className="text-[10px] font-bold uppercase text-slate-500">Website Bạn</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Chỉ số chính */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="border-none shadow-md bg-primary text-white">
+          <CardHeader className="pb-2">
+            <CardDescription className="text-white/70 text-xs">Gói cước hiện tại</CardDescription>
+            <CardTitle className="text-2xl font-bold uppercase">{profile?.planName || "Free"}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-[10px] text-white/50">Hạn mức tối đa: {limitCount.toLocaleString()}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-md">
+          <CardHeader className="pb-2">
+            <CardDescription className="text-xs">Giao dịch / Hạn mức</CardDescription>
+            <CardTitle className="text-2xl font-bold">{usageCount.toLocaleString()} / {limitCount.toLocaleString()}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Progress value={usagePercent} className={`h-2 ${isWarning ? 'bg-amber-100' : 'bg-muted'}`} />
+            <p className="text-[10px] text-muted-foreground text-right">{usagePercent}% đã dùng</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-md">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+            <div>
+              <CardDescription className="text-xs">Gmail Hook Status</CardDescription>
+              <CardTitle className="text-2xl font-bold">Hoạt động</CardTitle>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            </div>
+          </CardHeader>
+        </Card>
+
+        <Card className="border-none shadow-md">
+          <CardHeader className="pb-2">
+            <CardDescription className="text-xs">Tỉ lệ thành công</CardDescription>
+            <CardTitle className="text-2xl font-bold">100%</CardTitle>
+          </CardHeader>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-7 gap-8">
+        <Card className="lg:col-span-4 border-none shadow-md">
+          <CardHeader>
+            <CardTitle className="text-lg">Giao dịch tuần này</CardTitle>
+          </CardHeader>
+          <CardContent>
+          <div className="h-[250px] w-full mt-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData}>
+                  <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                  <Tooltip cursor={{fill: 'rgba(111, 45, 189, 0.05)'}} />
+                  <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-3 border-none shadow-md">
+          <CardHeader>
+            <CardTitle className="text-lg">Thông tin tài khoản</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="p-4 rounded-xl bg-secondary/30 space-y-3 border">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium">Email đăng ký:</span>
+                <span className="text-xs font-mono">{user?.email}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium">UID hệ thống:</span>
+                <span className="text-xs font-mono text-muted-foreground">{user?.uid?.substring(0, 8)}...</span>
+              </div>
+            </div>
+            <Button asChild className="w-full bg-accent hover:bg-accent/90 shadow-md">
+              <Link href="/dashboard/billing">Nâng cấp tài khoản ngay</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+</file>
+
 <file path="firestore.rules">
 rules_version = '2';
 service cloud.firestore {
@@ -16534,121 +16889,123 @@ service cloud.firestore {
 }
 </file>
 
-<file path="docs/backend.json">
-{
-  "entities": {
-    "UserProfile": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "UserProfile",
-      "type": "object",
-      "description": "Thông tin hồ sơ người dùng bao gồm hạn mức giao dịch và gói cước.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "UID của người dùng từ Firebase Auth."
-        },
-        "displayName": {
-          "type": "string"
-        },
-        "email": {
-          "type": "string",
-          "format": "email"
-        },
-        "planName": {
-          "type": "string",
-          "enum": ["Free", "Pro", "Enterprise"]
-        },
-        "transactionLimit": {
-          "type": "number",
-          "description": "Số lượng giao dịch tối đa trong tháng."
-        },
-        "transactionCount": {
-          "type": "number",
-          "description": "Số lượng giao dịch đã thực hiện trong tháng hiện tại."
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      "required": ["id", "email", "planName", "transactionLimit", "transactionCount"]
-    },
-    "PaymentGatewayConfiguration": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "PaymentGatewayConfiguration",
-      "type": "object",
-      "description": "Cấu hình cổng thanh toán.",
-      "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "gatewayType": { "type": "string" },
-        "apiKey": { "type": "string" },
-        "merchantId": { "type": "string" },
-        "currency": { "type": "string" },
-        "isEnabled": { "type": "boolean" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "updatedAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "name", "gatewayType", "merchantId", "currency", "isEnabled"]
-    },
-    "GmailListenerConfiguration": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "GmailListenerConfiguration",
-      "type": "object",
-      "description": "Cấu hình lắng nghe Gmail.",
-      "properties": {
-        "id": { "type": "string" },
-        "monitoredEmailAddress": { "type": "string", "format": "email" },
-        "bankSenderEmailPatterns": { "type": "array", "items": { "type": "string" } },
-        "confirmationKeywords": { "type": "array", "items": { "type": "string" } },
-        "isEnabled": { "type": "boolean" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "updatedAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "monitoredEmailAddress", "isEnabled"]
-    },
-    "WebhookConfiguration": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "WebhookConfiguration",
-      "type": "object",
-      "description": "Cấu hình Webhook gửi về Merchant.",
-      "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "targetUrl": { "type": "string", "format": "uri" },
-        "secretToken": { "type": "string" },
-        "referencePrefix": { "type": "string", "description": "Tiền tố mã đơn hàng (ví dụ: TT, CG, DH)." },
-        "triggerEvent": { "type": "string" },
-        "isEnabled": { "type": "boolean" },
-        "retryAttempts": { "type": "number" },
-        "retryIntervalSeconds": { "type": "number" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "updatedAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "name", "targetUrl", "isEnabled", "referencePrefix"]
-    }
-  },
-  "auth": {
-    "providers": ["password", "google.com"]
-  },
-  "firestore": {
-    "/users/{userId}": {
-      "schema": { "$ref": "#/backend/entities/UserProfile" },
-      "description": "Thông tin hồ sơ và hạn mức của người dùng."
-    },
-    "/users/{userId}/paymentGatewayConfigurations/{id}": {
-      "schema": { "$ref": "#/backend/entities/PaymentGatewayConfiguration" },
-      "description": "Cấu hình cổng thanh toán cá nhân."
-    },
-    "/users/{userId}/gmailListenerConfigurations/{id}": {
-      "schema": { "$ref": "#/backend/entities/GmailListenerConfiguration" },
-      "description": "Cấu hình Gmail Listener cá nhân."
-    },
-    "/users/{userId}/webhookConfigurations/{id}": {
-      "schema": { "$ref": "#/backend/entities/WebhookConfiguration" },
-      "description": "Cấu hình Webhook cá nhân gửi về WordPress hoặc Custom Web."
-    }
-  }
+<file path="src/app/admin/layout.tsx">
+"use client";
+
+import { SidebarProvider, SidebarInset, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarGroup, SidebarGroupLabel, SidebarFooter, SidebarTrigger } from "@/components/ui/sidebar";
+import { ShieldCheck, Users, BarChart3, Globe, Bell, FileCode, Settings, History, ArrowLeft } from "lucide-react";
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  return (
+    <SidebarProvider>
+      <Sidebar collapsible="icon" className="border-r border-border bg-slate-900 text-slate-100">
+        <SidebarHeader className="h-16 flex items-center px-6 border-b border-slate-800">
+          <Link href="/admin" className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center text-white font-bold">AD</div>
+            <span className="font-headline font-bold text-lg group-data-[collapsible=icon]:hidden">
+              Admin Panel
+            </span>
+          </Link>
+        </SidebarHeader>
+        <SidebarContent className="py-4">
+          <SidebarGroup>
+            <SidebarGroupLabel className="px-6 text-slate-500 text-[10px] uppercase font-bold">Management</SidebarGroupLabel>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Tổng quan">
+                  <Link href="/admin" className="flex items-center gap-3 px-6 py-2 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">
+                    <BarChart3 className="w-5 h-5" />
+                    <span>Hệ thống</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Người dùng">
+                  <Link href="/admin/users" className="flex items-center gap-3 px-6 py-2 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">
+                    <Users className="w-5 h-5" />
+                    <span>Khách hàng</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Lịch sử Giao dịch">
+                  <Link href="/admin/transactions" className="flex items-center gap-3 px-6 py-2 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">
+                    <History className="w-5 h-5" />
+                    <span>Lịch sử Giao dịch</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Cảnh báo">
+                  <Link href="/admin/alerts" className="flex items-center gap-3 px-6 py-2 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">
+                    <Bell className="w-5 h-5" />
+                    <span>Cảnh báo cước</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Tài liệu hệ thống">
+                  <Link href="/admin/system-docs" className="flex items-center gap-3 px-6 py-2 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">
+                    <FileCode className="w-5 h-5" />
+                    <span>Tài liệu hệ thống</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Cài đặt Hệ thống">
+                  <Link href="/admin/settings" className="flex items-center gap-3 px-6 py-2 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">
+                    <Settings className="w-5 h-5" />
+                    <span>Cài đặt Hệ thống</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroup>
+        </SidebarContent>
+        <SidebarFooter className="border-t border-slate-800 p-4">
+           <SidebarMenu>
+             <SidebarMenuItem>
+               <SidebarMenuButton asChild>
+                <Link href="/dashboard" className="flex items-center gap-3 px-4 py-2 text-slate-400 hover:text-white">
+                  <Globe className="w-5 h-5" />
+                  <span>Về User App</span>
+                </Link>
+              </SidebarMenuButton>
+             </SidebarMenuItem>
+           </SidebarMenu>
+        </SidebarFooter>
+      </Sidebar>
+      <SidebarInset className="bg-slate-50">
+        <header className="h-16 border-b bg-white flex items-center justify-between px-4 md:px-8 sticky top-0 z-10">
+          <div className="flex items-center gap-1 overflow-hidden">
+            <Button onClick={() => router.back()} variant="ghost" size="icon" className="md:hidden">
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <SidebarTrigger className="md:hidden" />
+            <div className="items-center gap-2 hidden sm:flex">
+              <ShieldCheck className="w-5 h-5 text-accent flex-shrink-0" />
+              <h1 className="text-base md:text-xl font-bold text-slate-800 truncate">
+                Quản trị viên
+              </h1>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 md:gap-4">
+             <LanguageSwitcher />
+             <Badge variant="outline" className="text-accent border-accent">Super Admin</Badge>
+          </div>
+          </header>
+        <main className="p-4 md:p-8">
+          {children}
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
+  );
 }
 </file>
 
@@ -16937,363 +17294,6 @@ export async function POST(req: NextRequest) {
     console.error('[Inbound Webhook Error]', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
-}
-</file>
-
-<file path="src/app/dashboard/page.tsx">
-"use client";
-
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Button } from "@/components/ui/button";
-import { AlertTriangle, ArrowRight, Mail, Cpu, Globe, Zap, CheckCircle2 } from "lucide-react";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
-import Link from "next/link";
-import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from "@/firebase";
-import { doc, collection, query, limit, orderBy } from "firebase/firestore";
-import { useMemo } from "react";
-
-export default function OverviewPage() {
-  const { user } = useUser();
-  const firestore = useFirestore();
-
-  const userProfileRef = useMemoFirebase(() => {
-    if (!firestore || !user?.uid) return null;
-    return doc(firestore, "users", user.uid);
-  }, [firestore, user?.uid]);
-
-  const { data: profile, isLoading: profileLoading } = useDoc(userProfileRef);
-
-  const webhooksQuery = useMemoFirebase(() => {
-    if (!firestore || !user?.uid) return null;
-    return query(collection(firestore, "users", user.uid, "webhookConfigurations"), limit(1));
-  }, [firestore, user?.uid]);
-
-  const { data: webhooks } = useCollection(webhooksQuery);
-  const prefix = webhooks?.[0]?.referencePrefix || "TT";
-
-  // Lấy lịch sử giao dịch thực tế từ Database
-  const logsQuery = useMemoFirebase(() => {
-    if (!firestore || !user?.uid) return null;
-    return query(collection(firestore, "users", user.uid, "webhook_logs"), orderBy("createdAt", "desc"), limit(100));
-  }, [firestore, user?.uid]);
-  const { data: logs } = useCollection(logsQuery);
-
-  // Xử lý dữ liệu thực tế cho biểu đồ (Gom nhóm theo thứ trong tuần)
-  const chartData = useMemo(() => {
-    const baseData =[
-      { name: 'CN', total: 0 }, { name: 'T2', total: 0 }, { name: 'T3', total: 0 },
-      { name: 'T4', total: 0 }, { name: 'T5', total: 0 }, { name: 'T6', total: 0 }, { name: 'T7', total: 0 }
-    ];
-
-    if (logs) {
-      logs.forEach(log => {
-        if (log.createdAt) {
-          const date = new Date(log.createdAt);
-          const dayIndex = date.getDay(); // 0 = CN, 1 = T2...
-          baseData[dayIndex].total += 1; // Tăng số lượng giao dịch cho ngày đó
-        }
-      });
-    }
-
-    // Sắp xếp lại mảng để T2 đứng đầu, CN đứng cuối cho thuận mắt người Việt
-    return [baseData[1], baseData[2], baseData[3], baseData[4], baseData[5], baseData[6], baseData[0]];
-  }, [logs]);
-
-  const usageCount = profile?.transactionCount || 0;
-  const limitCount = profile?.transactionLimit || 100;
-  const usagePercent = Math.round((usageCount / limitCount) * 100);
-  const isWarning = usagePercent >= 80;
-
-  if (profileLoading) return <div className="p-8">Đang tải dữ liệu...</div>;
-
-  return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Cảnh báo hạn mức */}
-      {isWarning && (
-        <div className="bg-amber-50 border border-amber-200 p-6 rounded-xl flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-4 text-amber-800">
-            <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
-              <AlertTriangle className="w-6 h-6 text-amber-600" />
-            </div>
-            <div>
-              <p className="font-bold text-lg">Cảnh báo: Sắp hết hạn mức giao dịch!</p>
-              <p className="text-sm opacity-80">Bạn đã sử dụng {usagePercent}% gói cước. Hãy nâng cấp để tránh gián đoạn xác nhận đơn hàng của bạn.</p>
-            </div>
-          </div>
-          <Button asChild size="lg" className="bg-amber-600 hover:bg-amber-700 text-white shadow-lg">
-            <Link href="/dashboard/billing" className="flex items-center gap-2 font-bold">
-              Gia hạn & Nâng cấp ngay <ArrowRight className="w-4 h-4" />
-            </Link>
-          </Button>
-        </div>
-      )}
-
-      {/* Sơ đồ luồng hoạt động */}
-      <Card className="border-none shadow-sm bg-slate-50 overflow-hidden">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Zap className="w-5 h-5 text-accent" />
-            Quy trình tự động hóa động
-          </CardTitle>
-          <CardDescription>Hệ thống đang tìm kiếm mã bắt đầu bằng: <Badge variant="outline" className="text-accent border-accent ml-1">{prefix}</Badge></CardDescription>
-        </CardHeader>
-        <CardContent className="pt-4">
-          <div className="grid grid-cols-1 md:grid-cols-7 gap-4 items-center">
-            {/* Bước 1: Ngân hàng */}
-            <div className="md:col-span-1 flex flex-col items-center text-center space-y-2">
-              <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center border border-slate-200">
-                <Globe className="w-6 h-6 text-blue-500" />
-              </div>
-              <span className="text-[10px] font-bold uppercase text-slate-500">Ngân hàng</span>
-            </div>
-
-            <div className="hidden md:flex md:col-span-1 justify-center">
-              <ArrowRight className="text-slate-300" />
-            </div>
-
-            {/* Bước 2: Gmail Hook */}
-            <div className="md:col-span-1 flex flex-col items-center text-center space-y-2">
-              <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center border border-slate-200">
-                <Mail className="w-6 h-6 text-red-500" />
-              </div>
-              <span className="text-[10px] font-bold uppercase text-slate-500">Gmail Hook</span>
-            </div>
-
-            <div className="hidden md:flex md:col-span-1 justify-center">
-              <ArrowRight className="text-slate-300" />
-            </div>
-
-            {/* Bước 3: AI Extract */}
-            <div className="md:col-span-1 flex flex-col items-center text-center space-y-2 relative">
-            <div className="w-16 h-16 rounded-2xl bg-accent text-white shadow-lg flex items-center justify-center animate-pulse">
-                <Cpu className="w-8 h-8" />
-              </div>
-              <span className="text-xs font-bold uppercase text-accent">AI ({prefix}xxxxxx)</span>
-              <Badge className="absolute -top-2 -right-2 bg-green-500 text-xs">Real-time</Badge>
-            </div>
-
-            <div className="hidden md:flex md:col-span-1 justify-center">
-              <ArrowRight className="text-slate-300" />
-            </div>
-
-            {/* Bước 4: Website Merchant */}
-            <div className="md:col-span-1 flex flex-col items-center text-center space-y-2">
-              <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center border border-green-200">
-                <CheckCircle2 className="w-6 h-6 text-green-500" />
-              </div>
-              <span className="text-[10px] font-bold uppercase text-slate-500">Website Bạn</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Chỉ số chính */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="border-none shadow-md bg-primary text-white">
-          <CardHeader className="pb-2">
-            <CardDescription className="text-white/70 text-xs">Gói cước hiện tại</CardDescription>
-            <CardTitle className="text-2xl font-bold uppercase">{profile?.planName || "Free"}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-[10px] text-white/50">Hạn mức tối đa: {limitCount.toLocaleString()}</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-none shadow-md">
-          <CardHeader className="pb-2">
-            <CardDescription className="text-xs">Giao dịch / Hạn mức</CardDescription>
-            <CardTitle className="text-2xl font-bold">{usageCount.toLocaleString()} / {limitCount.toLocaleString()}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Progress value={usagePercent} className={`h-2 ${isWarning ? 'bg-amber-100' : 'bg-muted'}`} />
-            <p className="text-[10px] text-muted-foreground text-right">{usagePercent}% đã dùng</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-none shadow-md">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-            <div>
-              <CardDescription className="text-xs">Gmail Hook Status</CardDescription>
-              <CardTitle className="text-2xl font-bold">Hoạt động</CardTitle>
-            </div>
-            <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            </div>
-          </CardHeader>
-        </Card>
-
-        <Card className="border-none shadow-md">
-          <CardHeader className="pb-2">
-            <CardDescription className="text-xs">Tỉ lệ thành công</CardDescription>
-            <CardTitle className="text-2xl font-bold">100%</CardTitle>
-          </CardHeader>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-7 gap-8">
-        <Card className="lg:col-span-4 border-none shadow-md">
-          <CardHeader>
-            <CardTitle className="text-lg">Giao dịch tuần này</CardTitle>
-          </CardHeader>
-          <CardContent>
-          <div className="h-[250px] w-full mt-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData}>
-                  <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                  <Tooltip cursor={{fill: 'rgba(111, 45, 189, 0.05)'}} />
-                  <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-3 border-none shadow-md">
-          <CardHeader>
-            <CardTitle className="text-lg">Thông tin tài khoản</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="p-4 rounded-xl bg-secondary/30 space-y-3 border">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Email đăng ký:</span>
-                <span className="text-xs font-mono">{user?.email}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">UID hệ thống:</span>
-                <span className="text-xs font-mono text-muted-foreground">{user?.uid?.substring(0, 8)}...</span>
-              </div>
-            </div>
-            <Button asChild className="w-full bg-accent hover:bg-accent/90 shadow-md">
-              <Link href="/dashboard/billing">Nâng cấp tài khoản ngay</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-}
-</file>
-
-<file path="src/app/admin/layout.tsx">
-"use client";
-
-import { SidebarProvider, SidebarInset, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarGroup, SidebarGroupLabel, SidebarFooter, SidebarTrigger } from "@/components/ui/sidebar";
-import { ShieldCheck, Users, BarChart3, Globe, Bell, FileCode, Settings, History, ArrowLeft } from "lucide-react";
-import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
-  return (
-    <SidebarProvider>
-      <Sidebar collapsible="icon" className="border-r border-border bg-slate-900 text-slate-100">
-        <SidebarHeader className="h-16 flex items-center px-6 border-b border-slate-800">
-          <Link href="/admin" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center text-white font-bold">AD</div>
-            <span className="font-headline font-bold text-lg group-data-[collapsible=icon]:hidden">
-              Admin Panel
-            </span>
-          </Link>
-        </SidebarHeader>
-        <SidebarContent className="py-4">
-          <SidebarGroup>
-            <SidebarGroupLabel className="px-6 text-slate-500 text-[10px] uppercase font-bold">Management</SidebarGroupLabel>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Tổng quan">
-                  <Link href="/admin" className="flex items-center gap-3 px-6 py-2 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">
-                    <BarChart3 className="w-5 h-5" />
-                    <span>Hệ thống</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Người dùng">
-                  <Link href="/admin/users" className="flex items-center gap-3 px-6 py-2 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">
-                    <Users className="w-5 h-5" />
-                    <span>Khách hàng</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Lịch sử Giao dịch">
-                  <Link href="/admin/transactions" className="flex items-center gap-3 px-6 py-2 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">
-                    <History className="w-5 h-5" />
-                    <span>Lịch sử Giao dịch</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Cảnh báo">
-                  <Link href="/admin/alerts" className="flex items-center gap-3 px-6 py-2 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">
-                    <Bell className="w-5 h-5" />
-                    <span>Cảnh báo cước</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Tài liệu hệ thống">
-                  <Link href="/admin/system-docs" className="flex items-center gap-3 px-6 py-2 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">
-                    <FileCode className="w-5 h-5" />
-                    <span>Tài liệu hệ thống</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Cài đặt Hệ thống">
-                  <Link href="/admin/settings" className="flex items-center gap-3 px-6 py-2 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">
-                    <Settings className="w-5 h-5" />
-                    <span>Cài đặt Hệ thống</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroup>
-        </SidebarContent>
-        <SidebarFooter className="border-t border-slate-800 p-4">
-           <SidebarMenu>
-             <SidebarMenuItem>
-               <SidebarMenuButton asChild>
-                <Link href="/dashboard" className="flex items-center gap-3 px-4 py-2 text-slate-400 hover:text-white">
-                  <Globe className="w-5 h-5" />
-                  <span>Về User App</span>
-                </Link>
-              </SidebarMenuButton>
-             </SidebarMenuItem>
-           </SidebarMenu>
-        </SidebarFooter>
-      </Sidebar>
-      <SidebarInset className="bg-slate-50">
-        <header className="h-16 border-b bg-white flex items-center justify-between px-4 md:px-8 sticky top-0 z-10">
-          <div className="flex items-center gap-1 overflow-hidden">
-            <Button onClick={() => router.back()} variant="ghost" size="icon" className="md:hidden">
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <SidebarTrigger className="md:hidden" />
-            <div className="items-center gap-2 hidden sm:flex">
-              <ShieldCheck className="w-5 h-5 text-accent flex-shrink-0" />
-              <h1 className="text-base md:text-xl font-bold text-slate-800 truncate">
-                Quản trị viên
-              </h1>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 md:gap-4">
-             <LanguageSwitcher />
-             <Badge variant="outline" className="text-accent border-accent">Super Admin</Badge>
-          </div>
-          </header>
-        <main className="p-4 md:p-8">
-          {children}
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
-  );
 }
 </file>
 
@@ -18054,8 +18054,13 @@ export default function IntegrationsPage() {
       } else {
         toast({ variant: "destructive", title: "Lỗi", description: result.error || "Có lỗi xảy ra" });
       }
-    } catch (error) {
-      toast({ variant: "destructive", title: "Lỗi", description: "Không thể kết nối đến API." });
+    } catch (error: any) {
+      console.error("[Test Inbound Error]:", error);
+      toast({ 
+        variant: "destructive", 
+        title: "Lỗi Server (500)", 
+        description: error.message || "Mất kết nối API. Sếp hãy kiểm tra lại Terminal xem có thiếu GOOGLE_API_KEY không nhé." 
+      });
     } finally {
       setIsTesting(false);
     }

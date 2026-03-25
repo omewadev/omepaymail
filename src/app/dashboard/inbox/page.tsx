@@ -173,10 +173,22 @@ export default function VirtualInboxPage() {
           </SheetHeader>
           
           <ScrollArea className="flex-1 p-6">
-            {/* CẢNH BÁO: Render HTML trực tiếp từ Email. Đã bọc trong class prose để format đẹp hơn */}
+            {/* Xử lý hiển thị thông minh: Giữ nguyên xuống dòng và tự động tạo Link click được */}
             <div 
-              className="prose prose-sm sm:prose-base max-w-none prose-a:text-blue-600 hover:prose-a:text-blue-800 break-words"
-              dangerouslySetInnerHTML={{ __html: selectedEmail?.bodyHtml || '<p>Không có nội dung</p>' }}
+              className="prose prose-sm sm:prose-base max-w-none prose-a:text-blue-600 hover:prose-a:text-blue-800 whitespace-pre-wrap break-words break-all"
+              dangerouslySetInnerHTML={{ 
+                __html: selectedEmail?.bodyHtml 
+                  ? (selectedEmail.bodyHtml.includes('<html') || selectedEmail.bodyHtml.includes('<div') || selectedEmail.bodyHtml.includes('<p>'))
+                    ? selectedEmail.bodyHtml // Nếu là HTML chuẩn thì render thẳng
+                    : selectedEmail.bodyHtml // Nếu là Plain-text thì tự động linkify và giữ xuống dòng
+                        .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" class="underline text-blue-600">$1</a>')
+                        .replace(/([a-zA-Z0-9.-]+\.google\.com\/mail\/vf-[^\s]+)/g, (match: string) => {
+                           // Xử lý riêng cho link Google bị thiếu https://
+                           if (match.startsWith('http')) return match;
+                           return `<a href="https://${match}" target="_blank" rel="noopener noreferrer" class="underline text-blue-600">https://${match}</a>`;
+                        })
+                  : '<p>Không có nội dung</p>' 
+              }}
             />
           </ScrollArea>
         </SheetContent>
