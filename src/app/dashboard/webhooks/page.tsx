@@ -1,21 +1,29 @@
-
 "use client";
 
+import { useState } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, Send, ExternalLink, Shield, Info, Copy, Terminal, BookOpen } from "lucide-react";
+import { Plus, Trash2, Send, ExternalLink, Shield, Info, Copy, Terminal, BookOpen, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from "@/firebase";
 import { collection, query, limit } from "firebase/firestore";
-import Link from "next/link";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { sendTestWebhook } from "@/app/actions/send-test-webhook";
 
 export default function WebhooksPage() {
   const { toast } = useToast();
   const { user } = useUser();
   const firestore = useFirestore();
+
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
+  const [newWebhookData, setNewWebhookData] = useState({ name: "My Website", url: "" });
 
   const webhooksQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
@@ -34,7 +42,44 @@ export default function WebhooksPage() {
     });
   };
 
-  if (isLoading) return <div className="p-8 text-center">Đang tải danh sách Webhooks...</div>;
+  const handleAddWebhook = () => {
+    if (!firestore || !user?.uid || !newWebhookData.url) {
+      toast({ variant: "destructive", title: "Lỗi", description: "Vui lòng nhập URL Webhook." });
+      return;
+    }
+    const colRef = collection(firestore, "users", user.uid, "webhookConfigurations");
+    addDocumentNonBlocking(colRef, {
+      name: newWebhookData.name,
+      targetUrl: newWebhookData.url,
+      secretToken: `pmh_live_${Math.random().toString(36).substring(7)}`,
+      referencePrefix: "TT",
+      isEnabled: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    toast({ title: "Thành công", description: "Đã thêm Endpoint mới." });
+    setIsAddDialogOpen(false);
+    setNewWebhookData({ name: "My Website", url: "" });
+  };
+
+  const handleSendTest = async () => {
+    if (!user?.uid || !hook?.id) return;
+    setIsTesting(true);
+    try {
+      const result = await sendTestWebhook(user.uid, hook.id);
+      if (result.success) {
+        toast({ title: "Đã gửi Test!", description: "Vui lòng kiểm tra Lịch sử Webhook để xem kết quả." });
+      } else {
+        toast({ variant: "destructive", title: "Gửi thất bại", description: result.error });
+      }
+    } catch (error) {
+      toast({ variant: "destructive", title: "Lỗi", description: "Không thể thực hiện yêu cầu." });
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  if (isLoading) return <div className="p-8 text-center"><Loader2 className="animate-spin mx-auto w-8 h-8 text-accent" /></div>;
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -49,9 +94,33 @@ export default function WebhooksPage() {
               <BookOpen className="w-5 h-5 mr-2" /> Xem Hướng dẫn
             </Link>
           </Button>
-          <Button className="bg-accent hover:bg-accent/90 font-bold h-12">
-            <Plus className="w-5 h-5 mr-2" /> Thêm Endpoint
-          </Button>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-accent hover:bg-accent/90 font-bold h-12">
+                <Plus className="w-5 h-5 mr-2" /> Thêm Endpoint
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Thêm Endpoint Webhook mới</DialogTitle>
+                <DialogDescription>Hệ thống sẽ gửi dữ liệu giao dịch đến URL này.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Tên gợi nhớ</Label>
+                  <Input id="name" value={newWebhookData.name} onChange={(e) => setNewWebhookData({...newWebhookData, name: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="url">URL Endpoint</Label>
+                  <Input id="url" placeholder="https://your-website.com/api/webhook" value={newWebhookData.url} onChange={(e) => setNewWebhookData({...newWebhookData, url: e.target.value})} />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Hủy</Button>
+                <Button onClick={handleAddWebhook}>Lưu Endpoint</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -91,7 +160,7 @@ export default function WebhooksPage() {
               </div>
               </CardHeader>
             <CardContent className="pt-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8"> {/* Đã sửa: Thêm grid-cols-1 cho mobile */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-4">
                   <h4 className="font-bold text-primary flex items-center gap-2">
                     <Shield className="w-4 h-4" /> Payload & Security
@@ -111,9 +180,9 @@ export default function WebhooksPage() {
                   </div>
                   <pre className="text-xs font-mono text-green-400 overflow-x-auto leading-relaxed">
 {`{
-  "amount": 500000,
-  "referenceCode": "${hook.referencePrefix}123456",
-  "senderName": "NGUYEN VAN A",
+  "amount": 10000,
+  "referenceCode": "${hook.referencePrefix}007",
+  "senderName": "PAYMAILHOOK TEST",
   "secretKey": "${hook.secretToken?.substring(0, 10)}..."
 }`}
                   </pre>
@@ -122,11 +191,14 @@ export default function WebhooksPage() {
             </CardContent>
             <CardFooter className="bg-muted/30 border-t flex flex-wrap justify-between items-center gap-4 px-8 py-6">
               <div className="flex items-center gap-6">
-                <Button variant="ghost" size="sm" className="font-bold text-primary hover:bg-primary/5">
-                  <Send className="w-4 h-4 mr-2" /> Gửi thử (Test)
+                <Button variant="ghost" size="sm" className="font-bold text-primary hover:bg-primary/5" onClick={handleSendTest} disabled={isTesting}>
+                  {isTesting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+                  Gửi thử (Test)
                 </Button>
-                <Button variant="ghost" size="sm" className="font-bold text-primary hover:bg-primary/5">
-                  <Info className="w-4 h-4 mr-2" /> Lịch sử Webhook
+                <Button asChild variant="ghost" size="sm" className="font-bold text-primary hover:bg-primary/5">
+                  <Link href="/dashboard/history">
+                    <Info className="w-4 h-4 mr-2" /> Lịch sử Webhook
+                  </Link>
                 </Button>
               </div>
               <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 font-bold">
