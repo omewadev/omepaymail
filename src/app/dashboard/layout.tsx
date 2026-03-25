@@ -67,6 +67,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Hộp thư ảo">
+                  <Link href="/dashboard/inbox" className="flex items-center gap-3 px-6 py-2 transition-colors hover:bg-secondary group">
+                    <Mail className="w-5 h-5 text-muted-foreground group-hover:text-accent" />
+                    <span className="font-medium">Hộp thư ảo</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Lịch sử Webhook">
                   <Link href="/dashboard/history" className="flex items-center gap-3 px-6 py-2 transition-colors hover:bg-secondary group">
                     <History className="w-5 h-5 text-muted-foreground group-hover:text-accent" />

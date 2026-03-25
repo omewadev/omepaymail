@@ -54,8 +54,13 @@ export default function IntegrationsPage() {
       } else {
         toast({ variant: "destructive", title: "Lỗi", description: result.error || "Có lỗi xảy ra" });
       }
-    } catch (error) {
-      toast({ variant: "destructive", title: "Lỗi", description: "Không thể kết nối đến API." });
+    } catch (error: any) {
+      console.error("[Test Inbound Error]:", error);
+      toast({ 
+        variant: "destructive", 
+        title: "Lỗi Server (500)", 
+        description: error.message || "Mất kết nối API. Sếp hãy kiểm tra lại Terminal xem có thiếu GOOGLE_API_KEY không nhé." 
+      });
     } finally {
       setIsTesting(false);
     }

@@ -37,11 +37,12 @@ export async function POST(req: NextRequest) {
 
     let text = "";
     let parsedTo = "";
+    let parsedEmail: any = null; // Đưa biến ra ngoài để dùng cho Hộp thư ảo
     try {
       const parser = new PostalMime();
-      const parsedEmail = await parser.parse(rawEmail);
+      parsedEmail = await parser.parse(rawEmail);
       text = parsedEmail.text || parsedEmail.html || rawEmail;
-      parsedTo = parsedEmail.to?.map(t => t.address).join(',') || '';
+      parsedTo = parsedEmail.to?.map((t: any) => t.address).join(',') || '';
     } catch (e) {
       text = rawEmail;
     }
@@ -50,6 +51,39 @@ export async function POST(req: NextRequest) {
     const searchTo = parsedTo || to || text; 
     const uidMatch = searchTo.match(/inbound\+([^@>"\s]+)@/i);
     const uid = uidMatch ? uidMatch[1].trim() : null;
+
+    // =====================================================================
+    // LƯU BẢN SAO EMAIL VÀO HỘP THƯ ẢO (VIRTUAL INBOX)
+    // =====================================================================
+    if (uid) {
+      // Chạy bất đồng bộ (Non-blocking) để không làm chậm tốc độ Webhook
+      (async () => {
+        try {
+          const emailData = {
+            subject: parsedEmail?.subject || '(Không có tiêu đề)',
+            from: parsedEmail?.from?.address || 'unknown',
+            fromName: parsedEmail?.from?.name || '',
+            snippet: (parsedEmail?.text || text || '').substring(0, 120).replace(/\n/g, ' ') + '...',
+            bodyHtml: parsedEmail?.html || parsedEmail?.text || text || '',
+            receivedAt: new Date().toISOString(),
+            isRead: false,
+          };
+          
+          const emailsRef = adminDb.collection('users').doc(uid).collection('emails');
+          await emailsRef.add(emailData);
+
+          // Tự động dọn dẹp: Chỉ giữ lại 50 email mới nhất để tiết kiệm chi phí Firestore
+          const oldEmailsSnap = await emailsRef.orderBy('receivedAt', 'desc').offset(50).get();
+          if (!oldEmailsSnap.empty) {
+            const batch = adminDb.batch();
+            oldEmailsSnap.docs.forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+          }
+        } catch (err) {
+          console.error(`[Virtual Inbox] Failed to save email for user ${uid}:`, err);
+        }
+      })();
+    }
 
     // =====================================================================
     // LUỒNG XỬ LÝ THANH TOÁN NỘI BỘ (ADMIN NHẬN TIỀN NÂNG CẤP) - GIỮ NGUYÊN
