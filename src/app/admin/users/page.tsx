@@ -1,10 +1,11 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, SlidersHorizontal, UserPlus, Copy } from "lucide-react";
+import { Search, SlidersHorizontal, UserPlus, Copy, Save } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase";
 import { collection, doc } from "firebase/firestore";
@@ -13,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function UserManagementPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const [limitInputs, setLimitInputs] = useState<{ [key: string]: string }>({});
 
   const usersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -21,12 +23,37 @@ export default function UserManagementPage() {
 
   const { data: users, isLoading } = useCollection(usersQuery);
 
-  const handleUpdateLimit = (userId: string, currentLimit: number, amount: number) => {
+  useEffect(() => {
+    if (users) {
+      const initialLimits = users.reduce((acc, user) => {
+        acc[user.id] = String(user.emailStorageLimit || 100);
+        return acc;
+      }, {} as { [key: string]: string });
+      setLimitInputs(initialLimits);
+    }
+  }, [users]);
+
+  const handleTxLimitUpdate = (userId: string, currentLimit: number, amount: number) => {
     if (!firestore) return;
-    // Đảm bảo hạn mức không bao giờ bị rớt xuống số âm
     const newLimit = Math.max(0, currentLimit + amount);
     const docRef = doc(firestore, "users", userId);
     updateDocumentNonBlocking(docRef, { transactionLimit: newLimit });
+  };
+
+  const handleEmailLimitChange = (userId: string, value: string) => {
+    setLimitInputs(prev => ({ ...prev, [userId]: value }));
+  };
+
+  const handleEmailLimitSave = (userId: string) => {
+    if (!firestore) return;
+    const newLimit = parseInt(limitInputs[userId], 10);
+    if (isNaN(newLimit) || newLimit < 0) {
+      toast({ variant: "destructive", title: "Lỗi", description: "Vui lòng nhập một số hợp lệ." });
+      return;
+    }
+    const docRef = doc(firestore, "users", userId);
+    updateDocumentNonBlocking(docRef, { emailStorageLimit: newLimit });
+    toast({ title: "Thành công", description: `Đã cập nhật giới hạn mail cho user.` });
   };
 
   const copyToClipboard = (text: string) => {
@@ -63,6 +90,7 @@ export default function UserManagementPage() {
                 <TableHead>Gói</TableHead>
                 <TableHead>Đã dùng</TableHead>
                 <TableHead>Hạn mức</TableHead>
+                <TableHead>Giới hạn Mail</TableHead>
                 <TableHead className="text-right">Tác vụ</TableHead>
               </TableRow>
             </TableHeader>
@@ -90,13 +118,26 @@ export default function UserManagementPage() {
                     {u.transactionCount?.toLocaleString()}
                   </TableCell>
                   <TableCell className="font-medium">{u.transactionLimit?.toLocaleString()}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        className="h-8 w-20"
+                        value={limitInputs[u.id] || ''}
+                        onChange={(e) => handleEmailLimitChange(u.id, e.target.value)}
+                      />
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleEmailLimitSave(u.id)}>
+                        <Save className="w-4 h-4 text-accent" />
+                      </Button>
+                    </div>
+                  </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
                       <Button 
                         variant="outline" 
                         size="sm" 
                         className="text-destructive border-destructive hover:bg-destructive hover:text-white"
-                        onClick={() => handleUpdateLimit(u.id, u.transactionLimit, -500)}
+                        onClick={() => handleTxLimitUpdate(u.id, u.transactionLimit, -500)}
                       >
                         -500
                       </Button>
@@ -104,7 +145,7 @@ export default function UserManagementPage() {
                         variant="outline" 
                         size="sm" 
                         className="text-accent border-accent hover:bg-accent hover:text-white"
-                        onClick={() => handleUpdateLimit(u.id, u.transactionLimit, 500)}
+                        onClick={() => handleTxLimitUpdate(u.id, u.transactionLimit, 500)}
                       >
                         +500
                       </Button>

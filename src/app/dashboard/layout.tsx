@@ -67,10 +67,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Hộp thư ảo">
+                <SidebarMenuButton asChild tooltip="Hộp thư trung gian">
                   <Link href="/dashboard/inbox" className="flex items-center gap-3 px-6 py-2 transition-colors hover:bg-secondary group">
                     <Mail className="w-5 h-5 text-muted-foreground group-hover:text-accent" />
-                    <span className="font-medium">Hộp thư ảo</span>
+                    <span className="font-medium">Hộp thư trung gian</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

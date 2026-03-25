@@ -53,12 +53,19 @@ export async function POST(req: NextRequest) {
     const uid = uidMatch ? uidMatch[1].trim() : null;
 
     // =====================================================================
-    // LƯU BẢN SAO EMAIL VÀO HỘP THƯ ẢO (VIRTUAL INBOX)
+    // LƯU BẢN SAO EMAIL VÀO HỘP THƯ TRUNG GIAN (VIRTUAL INBOX)
     // =====================================================================
     if (uid) {
       // Chạy bất đồng bộ (Non-blocking) để không làm chậm tốc độ Webhook
       (async () => {
         try {
+          // Lấy thông tin user để đọc giới hạn lưu trữ
+          const userRef = adminDb.collection('users').doc(uid);
+          const userDoc = await userRef.get();
+          const userData = userDoc.data();
+          // Mặc định là 100 nếu admin chưa set, sếp có thể đổi số này
+          const storageLimit = userData?.emailStorageLimit || 100;
+
           const emailData = {
             subject: parsedEmail?.subject || '(Không có tiêu đề)',
             from: parsedEmail?.from?.address || 'unknown',
@@ -69,11 +76,11 @@ export async function POST(req: NextRequest) {
             isRead: false,
           };
           
-          const emailsRef = adminDb.collection('users').doc(uid).collection('emails');
+          const emailsRef = userRef.collection('emails');
           await emailsRef.add(emailData);
 
-          // Tự động dọn dẹp: Chỉ giữ lại 1000 email mới nhất theo yêu cầu
-          const oldEmailsSnap = await emailsRef.orderBy('receivedAt', 'desc').offset(1000).get();
+          // Tự động dọn dẹp: Đọc giới hạn động từ user document
+          const oldEmailsSnap = await emailsRef.orderBy('receivedAt', 'desc').offset(storageLimit).get();
           if (!oldEmailsSnap.empty) {
             const batch = adminDb.batch();
             oldEmailsSnap.docs.forEach(doc => batch.delete(doc.ref));

@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Mail, MailOpen, Trash2, Loader2, Inbox, Clock, User as UserIcon, Search, ChevronLeft, ChevronRight, Info } from "lucide-react";
+import { Mail, MailOpen, Trash2, Loader2, Inbox, Clock, User as UserIcon, Search, ChevronLeft, ChevronRight, Info, ChevronDown } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useUser, useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
 import { collection, query, orderBy, doc, limit } from "firebase/firestore";
 import { format } from "date-fns";
@@ -102,22 +103,27 @@ export default function VirtualInboxPage() {
     <div className="space-y-6 animate-in fade-in duration-500">
       <div>
         <h2 className="text-3xl font-headline font-bold text-primary flex items-center gap-3">
-          <Inbox className="w-8 h-8 text-accent" /> Hộp thư ảo
+          <Inbox className="w-8 h-8 text-accent" /> Hộp thư trung gian
         </h2>
         
-        {/* Hướng dẫn xử lý thủ công */}
-        <div className="mt-4 bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800 leading-relaxed">
-          <p className="font-bold flex items-center gap-2 mb-2">
-            <Info className="w-4 h-4" /> Hướng dẫn xác minh thủ công:
-          </p>
-          <p>Bạn có thể xem mã OTP hoặc click link xác nhận thủ công tại đây, nếu chưa được bạn hãy:</p>
-          <ul className="list-decimal pl-5 mt-2 space-y-1">
-            <li>Hãy <b>Copy chính xác đường link</b> dùng để xác minh trong mail yêu cầu xác minh.</li>
-            <li>Mở một Tab mới trên trình duyệt, Tab này <b>phải đang đăng nhập sẵn tài khoản gmail</b> đang muốn xác minh.</li>
-            <li>Dán đường link đó vào thanh địa chỉ và nhấn Enter.</li>
-          </ul>
-          <p className="mt-2 font-medium text-blue-700">👉 Kết quả: Google sẽ báo xác minh thành công ngay lập tức!</p>
-        </div>
+        {/* Hướng dẫn xử lý thủ công (Collapsible) */}
+        <Collapsible className="mt-4 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-800">
+          <CollapsibleTrigger className="w-full p-4 flex items-center justify-between font-bold text-blue-900 hover:bg-blue-100/50 rounded-t-xl transition-colors [&[data-state=open]>svg]:rotate-180">
+            <span className="flex items-center gap-2">
+              <Info className="w-4 h-4" /> Hướng dẫn xác minh thủ công (Click để xem)
+            </span>
+            <ChevronDown className="w-5 h-5 transition-transform" />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="p-4 pt-0 leading-relaxed">
+            <p>Bạn có thể xem mã OTP hoặc click link xác nhận thủ công tại đây, nếu chưa được bạn hãy:</p>
+            <ul className="list-decimal pl-5 mt-2 space-y-1">
+              <li>Hãy <b>Copy chính xác đường link</b> dùng để xác minh trong mail yêu cầu xác minh.</li>
+              <li>Mở một Tab mới trên trình duyệt, Tab này <b>phải đang đăng nhập sẵn tài khoản gmail</b> đang muốn xác minh.</li>
+              <li>Dán đường link đó vào thanh địa chỉ và nhấn Enter.</li>
+            </ul>
+            <p className="mt-2 font-medium text-blue-700">👉 Kết quả: Google sẽ báo xác minh thành công ngay lập tức!</p>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
 
       <Card className="border-none shadow-sm">
