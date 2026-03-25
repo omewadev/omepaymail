@@ -9,21 +9,24 @@ import { Plus, Trash2, Send, ExternalLink, Shield, Info, Copy, Terminal, BookOpe
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from "@/firebase";
-import { collection, query, limit } from "firebase/firestore";
+import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
+import { collection, query, limit, doc } from "firebase/firestore";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { sendTestWebhook } from "@/app/actions/send-test-webhook";
+import { Edit } from "lucide-react";
 
 export default function WebhooksPage() {
   const { toast } = useToast();
   const { user } = useUser();
   const firestore = useFirestore();
 
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const[isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
-  const [newWebhookData, setNewWebhookData] = useState({ name: "My Website", url: "" });
+  const[newWebhookData, setNewWebhookData] = useState({ name: "My Website", url: "" });
+  const[editWebhookData, setEditWebhookData] = useState({ name: "", url: "" });
 
   const webhooksQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
@@ -62,6 +65,30 @@ export default function WebhooksPage() {
     setNewWebhookData({ name: "My Website", url: "" });
   };
 
+  const handleEditWebhook = () => {
+    if (!firestore || !user?.uid || !hook?.id || !editWebhookData.url) {
+      toast({ variant: "destructive", title: "Lỗi", description: "Vui lòng nhập URL Webhook." });
+      return;
+    }
+    const docRef = doc(firestore, "users", user.uid, "webhookConfigurations", hook.id);
+    updateDocumentNonBlocking(docRef, {
+      name: editWebhookData.name,
+      targetUrl: editWebhookData.url,
+      updatedAt: new Date().toISOString(),
+    });
+    toast({ title: "Thành công", description: "Đã cập nhật Endpoint." });
+    setIsEditDialogOpen(false);
+  };
+
+  const handleDeleteWebhook = () => {
+    if (!firestore || !user?.uid || !hook?.id) return;
+    if (confirm("Bạn có chắc chắn muốn xóa Webhook này không? Hệ thống sẽ ngừng gửi dữ liệu về website của bạn.")) {
+      const docRef = doc(firestore, "users", user.uid, "webhookConfigurations", hook.id);
+      deleteDocumentNonBlocking(docRef);
+      toast({ title: "Đã xóa", description: "Endpoint đã được gỡ bỏ." });
+    }
+  };
+
   const handleSendTest = async () => {
     if (!user?.uid || !hook?.id) return;
     setIsTesting(true);
@@ -94,12 +121,15 @@ export default function WebhooksPage() {
               <BookOpen className="w-5 h-5 mr-2" /> Xem Hướng dẫn
             </Link>
           </Button>
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-accent hover:bg-accent/90 font-bold h-12">
-                <Plus className="w-5 h-5 mr-2" /> Thêm Endpoint
-              </Button>
-            </DialogTrigger>
+          
+          {/* Chỉ hiện nút Thêm nếu chưa có Webhook nào */}
+          {!hook && (
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-accent hover:bg-accent/90 font-bold h-12">
+                  <Plus className="w-5 h-5 mr-2" /> Thêm Endpoint
+                </Button>
+              </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Thêm Endpoint Webhook mới</DialogTitle>
@@ -121,8 +151,33 @@ export default function WebhooksPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          )}
         </div>
       </div>
+
+      {/* Dialog Sửa Webhook */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sửa Endpoint Webhook</DialogTitle>
+            <DialogDescription>Cập nhật URL nhận dữ liệu của bạn.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Tên gợi nhớ</Label>
+              <Input id="edit-name" value={editWebhookData.name} onChange={(e) => setEditWebhookData({...editWebhookData, name: e.target.value})} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-url">URL Endpoint</Label>
+              <Input id="edit-url" placeholder="https://your-website.com/api/webhook" value={editWebhookData.url} onChange={(e) => setEditWebhookData({...editWebhookData, url: e.target.value})} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Hủy</Button>
+            <Button onClick={handleEditWebhook}>Cập nhật</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Alert className="bg-primary/5 border-primary/20">
         <Terminal className="h-5 w-5 text-primary" />
@@ -201,9 +256,27 @@ export default function WebhooksPage() {
                   </Link>
                 </Button>
               </div>
-              <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 font-bold">
-                <Trash2 className="w-4 h-4 mr-2" /> Xóa
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="font-bold text-slate-600 hover:bg-slate-100"
+                  onClick={() => {
+                    setEditWebhookData({ name: hook.name || "", url: hook.targetUrl || "" });
+                    setIsEditDialogOpen(true);
+                  }}
+                >
+                  <Edit className="w-4 h-4 mr-2" /> Sửa
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-destructive hover:bg-destructive/10 font-bold"
+                  onClick={handleDeleteWebhook}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" /> Xóa
+                </Button>
+              </div>
             </CardFooter>
           </Card>
         ) : (

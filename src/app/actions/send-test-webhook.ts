@@ -37,13 +37,19 @@ export async function sendTestWebhook(uid: string, webhookId: string) {
     };
 
     // 3. Gọi hàm dispatchWebhook hiện có để gửi đi
-    const success = await dispatchWebhook(uid, mockPayload);
+    const result = await dispatchWebhook(uid, mockPayload);
 
-    if (success) {
+    // Logic kiểm tra đã được sửa lại để TypeScript hiểu
+    if (result.isSuccess) {
       return { success: true };
-    } else {
-      return { success: false, error: 'Gửi thất bại. URL Webhook có thể bị lỗi hoặc không phản hồi.' };
+    } 
+    
+    // Nếu không thành công, báo lỗi chi tiết
+    if (result.statusCode === 401 || result.statusCode === 403) {
+      return { success: false, error: `Lỗi xác thực (${result.statusCode}): Secret Key không khớp. Vui lòng đồng bộ lại Secret Key từ trang Cài đặt.` };
     }
+    
+    return { success: false, error: `Gửi thất bại (${result.statusCode}). URL Webhook có thể bị lỗi hoặc không phản hồi.` };
 
   } catch (error: any) {
     console.error('[Send Test Webhook Error]', error);

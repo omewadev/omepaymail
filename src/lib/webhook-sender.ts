@@ -2,7 +2,14 @@ import 'server-only';
 import { adminDb } from '@/lib/firebase-admin';
 import { ExtractTransactionOutput } from '@/ai/flows/extract-transaction-flow';
 
-export async function dispatchWebhook(uid: string, transactionData: ExtractTransactionOutput) {
+// Khai báo kiểu dữ liệu trả về để TypeScript không bị lỗi
+export interface DispatchResult {
+  isSuccess: boolean;
+  statusCode: number;
+  responseBody: string;
+}
+
+export async function dispatchWebhook(uid: string, transactionData: ExtractTransactionOutput): Promise<DispatchResult> {
   try {
     // 1. Lấy cấu hình Webhook và giới hạn lưu trữ của User
     const userRef = adminDb.collection('users').doc(uid);
@@ -16,12 +23,13 @@ export async function dispatchWebhook(uid: string, transactionData: ExtractTrans
       .limit(1)
       .get();
 
-    if (webhooksSnapshot.empty) {
-      console.log(`[Webhook] User ${uid} has no active webhook configurations.`);
-      return false;
-    }
-
-    const config = webhooksSnapshot.docs[0].data();
+      if (webhooksSnapshot.empty) {
+        console.log(`[Webhook] User ${uid} has no active webhook configurations.`);
+        // Trả về object đúng chuẩn DispatchResult
+        return { isSuccess: false, statusCode: 404, responseBody: 'User has no active webhook configurations.' };
+      }
+  
+      const config = webhooksSnapshot.docs[0].data();
     const targetUrl = config.targetUrl;
     const secretToken = config.secretToken;
 
@@ -85,15 +93,16 @@ export async function dispatchWebhook(uid: string, transactionData: ExtractTrans
      await batch.commit();
    }
 
-   if (!isSuccess) {
-     throw new Error(`HTTP Error: ${statusCode} - ${responseBody}`);
-   }
+   // Không ném lỗi ở đây nữa mà trả về object kết quả
+   // if (!isSuccess) {
+   //   throw new Error(`HTTP Error: ${statusCode} - ${responseBody}`);
+   // }
 
-   console.log(`[Webhook] Successfully dispatched to ${targetUrl} for user ${uid}`);
-   return true;
+   console.log(`[Webhook] Dispatch attempt to ${targetUrl} for user ${uid} completed with status ${statusCode}.`);
+   return { isSuccess, statusCode, responseBody };
 
- } catch (error) {
+ } catch (error: any) {
    console.error(`[Webhook] Failed to dispatch for user ${uid}:`, error);
-   return false;
+   return { isSuccess: false, statusCode: 500, responseBody: error.message };
  }
 }
