@@ -15,6 +15,7 @@ export default function UserManagementPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [limitInputs, setLimitInputs] = useState<{ [key: string]: string }>({});
+  const [logLimitInputs, setLogLimitInputs] = useState<{ [key: string]: string }>({});
 
   const usersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -25,11 +26,17 @@ export default function UserManagementPage() {
 
   useEffect(() => {
     if (users) {
-      const initialLimits = users.reduce((acc, user) => {
+      const initialEmailLimits = users.reduce((acc, user) => {
         acc[user.id] = String(user.emailStorageLimit || 100);
         return acc;
       }, {} as { [key: string]: string });
-      setLimitInputs(initialLimits);
+      setLimitInputs(initialEmailLimits);
+
+      const initialLogLimits = users.reduce((acc, user) => {
+        acc[user.id] = String(user.webhookLogLimit || 100);
+        return acc;
+      }, {} as { [key: string]: string });
+      setLogLimitInputs(initialLogLimits);
     }
   }, [users]);
 
@@ -54,6 +61,22 @@ export default function UserManagementPage() {
     const docRef = doc(firestore, "users", userId);
     updateDocumentNonBlocking(docRef, { emailStorageLimit: newLimit });
     toast({ title: "Thành công", description: `Đã cập nhật giới hạn mail cho user.` });
+  };
+
+  const handleLogLimitChange = (userId: string, value: string) => {
+    setLogLimitInputs(prev => ({ ...prev, [userId]: value }));
+  };
+
+  const handleLogLimitSave = (userId: string) => {
+    if (!firestore) return;
+    const newLimit = parseInt(logLimitInputs[userId], 10);
+    if (isNaN(newLimit) || newLimit < 0) {
+      toast({ variant: "destructive", title: "Lỗi", description: "Vui lòng nhập một số hợp lệ." });
+      return;
+    }
+    const docRef = doc(firestore, "users", userId);
+    updateDocumentNonBlocking(docRef, { webhookLogLimit: newLimit });
+    toast({ title: "Thành công", description: `Đã cập nhật giới hạn log cho user.` });
   };
 
   const copyToClipboard = (text: string) => {
@@ -91,6 +114,7 @@ export default function UserManagementPage() {
                 <TableHead>Đã dùng</TableHead>
                 <TableHead>Hạn mức</TableHead>
                 <TableHead>Giới hạn Mail</TableHead>
+                <TableHead>Giới hạn Log</TableHead>
                 <TableHead className="text-right">Tác vụ</TableHead>
               </TableRow>
             </TableHeader>
@@ -127,6 +151,19 @@ export default function UserManagementPage() {
                         onChange={(e) => handleEmailLimitChange(u.id, e.target.value)}
                       />
                       <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleEmailLimitSave(u.id)}>
+                        <Save className="w-4 h-4 text-accent" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        className="h-8 w-20"
+                        value={logLimitInputs[u.id] || ''}
+                        onChange={(e) => handleLogLimitChange(u.id, e.target.value)}
+                      />
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleLogLimitSave(u.id)}>
                         <Save className="w-4 h-4 text-accent" />
                       </Button>
                     </div>
