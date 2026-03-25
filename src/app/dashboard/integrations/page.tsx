@@ -143,7 +143,7 @@ export default function IntegrationsPage() {
                   <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center shrink-0 font-bold group-hover:scale-110 transition-transform">1</div>
                   <div>
                     <p className="font-bold">Thêm địa chỉ chuyển tiếp</p>
-                    <p className="text-sm text-muted-foreground">Vào Cài đặt Gmail {'>'} Chuyển tiếp và POP/IMAP {'>'} Thêm địa chỉ chuyển tiếp. Dán email màu xanh ở trên vào.</p>
+                    <p className="text-sm text-muted-foreground">Vào Cài đặt Gmail {'>'} Vào Chuyển tiếp và POP/IMAP {'>'} Thêm địa chỉ chuyển tiếp. Dán email màu xanh ở trên vào.</p>
                   </div>
                 </div>
                 
@@ -152,6 +152,9 @@ export default function IntegrationsPage() {
                   <div>
                     <p className="font-bold">Xác nhận mã từ PayMailHook</p>
                     <p className="text-sm text-muted-foreground">Gmail sẽ gửi một mã xác nhận. Hệ thống AI của chúng tôi sẽ tự động duyệt mã này cho bạn trong vòng 1 phút.</p>
+                    <div className="text-sm text-amber-700 bg-amber-50 p-3 rounded-lg border border-amber-200 leading-relaxed">
+                      <b>👉 Lưu ý:</b> Nếu hơn 1 phút là đã bị chặn. Hãy vào <b>"Hộp thư trung gian"</b> {'>'} mở thư yêu cầu xác minh nhận được {'>'} tìm đường link cần xác minh, bấm vào để xác minh, hoặc copy link đó dán vào trình duyệt web cạnh với trình duyệt web đang mở mail chuyển hướng, dán vào để xác minh.
+                    </div>
                   </div>
                 </div>
 
