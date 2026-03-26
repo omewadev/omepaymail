@@ -47,9 +47,9 @@ export async function POST(req: NextRequest) {
       text = rawEmail;
     }
 
-    // [FIX 2] Lấy UID chính xác từ header gốc của email
+    //[FIX 2] Lấy UID chính xác từ header gốc của email (Hỗ trợ cả định dạng +caf_ của Gmail)
     const searchTo = parsedTo || to || text; 
-    const uidMatch = searchTo.match(/inbound\+([^@>"\s]+)@/i);
+    const uidMatch = searchTo.match(/inbound\+([^@>"\s=]+)[@=]/i);
     const uid = uidMatch ? uidMatch[1].trim() : null;
 
     // =====================================================================
