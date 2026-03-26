@@ -261,8 +261,29 @@ export async function POST(req: NextRequest) {
     }
 
     const userData = userDoc.data();
+    if (!userData) return NextResponse.json({ error: 'User data empty' }, { status: 404 });
 
-    if (!userData || (userData.transactionCount >= userData.transactionLimit)) {
+    // [LOGIC 3 LUỒNG] Lấy data hiện tại (Hỗ trợ tương thích ngược user cũ)
+    let txWelcome = userData.txWelcomeBalance ?? (userData.transactionLimit - userData.transactionCount > 0 ? userData.transactionLimit - userData.transactionCount : 0);
+    let txMonthly = userData.txMonthlyBalance ?? 0;
+    let txPurchased = userData.txPurchasedBalance ?? 0;
+    let lastReset = userData.lastMonthlyReset ?? "";
+    
+    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+    let needsUpdate = false;
+    const updatePayload: any = {};
+
+    // [LAZY RESET] Nếu sang tháng mới, tự động nạp lại 50 giao dịch
+    if (lastReset !== currentMonth) {
+      txMonthly = 50;
+      updatePayload.txMonthlyBalance = 50;
+      updatePayload.lastMonthlyReset = currentMonth;
+      needsUpdate = true;
+    }
+
+    // Kiểm tra tổng hạn mức
+    if (txMonthly <= 0 && txWelcome <= 0 && txPurchased <= 0) {
+      if (needsUpdate) await userRef.update(updatePayload); // Vẫn lưu reset tháng nếu có
       return NextResponse.json({ success: false, message: 'Transaction limit reached' }, { status: 403 });
     }
 
@@ -285,9 +306,16 @@ export async function POST(req: NextRequest) {
           // TẦNG 2: GIAO DỊCH HỢP LỆ (Có tiền + Có Prefix) -> Bắn Webhook
           const webhookSuccess = await dispatchWebhook(uid, extractedData);
           if (webhookSuccess) {
-            await userRef.update({
-              transactionCount: admin.firestore.FieldValue.increment(1)
-            });
+            // [WATERFALL DEDUCTION] Trừ ưu tiên: Tháng -> Tặng -> Mua
+            if (txMonthly > 0) {
+              updatePayload.txMonthlyBalance = admin.firestore.FieldValue.increment(-1);
+            } else if (txWelcome > 0) {
+              updatePayload.txWelcomeBalance = admin.firestore.FieldValue.increment(-1);
+            } else if (txPurchased > 0) {
+              updatePayload.txPurchasedBalance = admin.firestore.FieldValue.increment(-1);
+            }
+            updatePayload.transactionCount = admin.firestore.FieldValue.increment(1);
+            await userRef.update(updatePayload);
           }
           return NextResponse.json({ success: true, message: 'Tier 2: Valid transaction processed' });
         

@@ -40,11 +40,21 @@ export default function UserManagementPage() {
     }
   }, [users]);
 
-  const handleTxLimitUpdate = (userId: string, currentLimit: number, amount: number) => {
+  const handleTxLimitUpdate = (userId: string, currentPurchased: number, amount: number) => {
     if (!firestore) return;
-    const newLimit = Math.max(0, currentLimit + amount);
+    const newPurchased = Math.max(0, (currentPurchased || 0) + amount);
+    
+    let newPlanName = "Free";
+    if (newPurchased >= 1000) newPlanName = "Enterprise";
+    else if (newPurchased >= 100) newPlanName = "Pro";
+
     const docRef = doc(firestore, "users", userId);
-    updateDocumentNonBlocking(docRef, { transactionLimit: newLimit });
+    updateDocumentNonBlocking(docRef, { 
+      txPurchasedBalance: newPurchased,
+      planName: newPlanName,
+      updatedAt: new Date().toISOString()
+    });
+    toast({ title: "Thành công", description: `Đã cập nhật số dư Mua thêm.` });
   };
 
   const handleEmailLimitChange = (userId: string, value: string) => {
@@ -138,10 +148,13 @@ export default function UserManagementPage() {
                     </div>
                   </TableCell>
                   <TableCell><Badge variant="outline" className="text-xs">{u.planName}</Badge></TableCell>
-                  <TableCell className={u.transactionCount / u.transactionLimit > 0.9 ? "text-red-500 font-bold" : ""}>
-                    {u.transactionCount?.toLocaleString()}
+                  <TableCell>
+                    <div className="flex flex-col text-xs">
+                      <span className="text-blue-600">Tháng: {u.txMonthlyBalance ?? 0}</span>
+                      <span className="text-emerald-600">Tặng: {u.txWelcomeBalance ?? 0}</span>
+                    </div>
                   </TableCell>
-                  <TableCell className="font-medium">{u.transactionLimit?.toLocaleString()}</TableCell>
+                  <TableCell className="font-bold text-purple-600">{u.txPurchasedBalance ?? 0}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Input
@@ -170,11 +183,11 @@ export default function UserManagementPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <Button 
+                    <Button 
                         variant="outline" 
                         size="sm" 
                         className="text-destructive border-destructive hover:bg-destructive hover:text-white"
-                        onClick={() => handleTxLimitUpdate(u.id, u.transactionLimit, -500)}
+                        onClick={() => handleTxLimitUpdate(u.id, u.txPurchasedBalance, -500)}
                       >
                         -500
                       </Button>
@@ -182,7 +195,7 @@ export default function UserManagementPage() {
                         variant="outline" 
                         size="sm" 
                         className="text-accent border-accent hover:bg-accent hover:text-white"
-                        onClick={() => handleTxLimitUpdate(u.id, u.transactionLimit, 500)}
+                        onClick={() => handleTxLimitUpdate(u.id, u.txPurchasedBalance, 500)}
                       >
                         +500
                       </Button>

@@ -66,7 +66,10 @@ export default function Home() {
           email: result.user.email,
           displayName: email.split('@')[0],
           planName: 'Free',
-          transactionLimit: 100,
+          txWelcomeBalance: 100,
+          txMonthlyBalance: 50,
+          txPurchasedBalance: 0,
+          lastMonthlyReset: new Date().toISOString().slice(0, 7), // Lưu định dạng YYYY-MM
           transactionCount: 0,
           role: userRole,
           createdAt: new Date().toISOString()
@@ -103,7 +106,10 @@ export default function Home() {
           email: result.user.email,
           displayName: result.user.displayName || '',
           planName: 'Free',
-          transactionLimit: 100,
+          txWelcomeBalance: 100,
+          txMonthlyBalance: 50,
+          txPurchasedBalance: 0,
+          lastMonthlyReset: new Date().toISOString().slice(0, 7),
           transactionCount: 0,
           role: userRole,
           createdAt: new Date().toISOString()
