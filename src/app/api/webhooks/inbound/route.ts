@@ -37,19 +37,26 @@ export async function POST(req: NextRequest) {
 
     let text = "";
     let parsedTo = "";
+    let deliveredTo = "";
     let parsedEmail: any = null; // Đưa biến ra ngoài để dùng cho Hộp thư ảo
     try {
       const parser = new PostalMime();
       parsedEmail = await parser.parse(rawEmail);
       text = parsedEmail.text || parsedEmail.html || rawEmail;
       parsedTo = parsedEmail.to?.map((t: any) => t.address).join(',') || '';
+      
+      // Lấy thêm các header đặc thù của email chuyển tiếp (Forwarding)
+      const headers = parsedEmail.headers ||[];
+      const deliveredToHeader = headers.find((h: any) => h.key.toLowerCase() === 'delivered-to' || h.key.toLowerCase() === 'x-forwarded-to');
+      if (deliveredToHeader) deliveredTo = deliveredToHeader.value;
     } catch (e) {
       text = rawEmail;
     }
 
-    //[FIX 2] Lấy UID chính xác từ header gốc của email (Hỗ trợ cả định dạng +caf_ của Gmail)
-    const searchTo = parsedTo || to || text; 
-    const uidMatch = searchTo.match(/inbound\+([^@>"\s=]+)[@=]/i);
+    // [FIX CRITICAL 3] Gom TẤT CẢ các trường có thể chứa địa chỉ đích vào một chuỗi để quét Regex
+    // Ưu tiên 'to' (Vỏ thư từ Cloudflare) -> 'deliveredTo' (Header chuyển tiếp) -> 'parsedTo' (Ruột thư) -> 'text'
+    const searchString = `${to} | ${deliveredTo} | ${parsedTo} | ${text}`; 
+    const uidMatch = searchString.match(/inbound\+([^@>"\s=]+)[@=]/i);
     let uid = uidMatch ? uidMatch[1].trim() : null;
 
     // [FIX CRITICAL] TÌM UID GỐC NGAY TỪ ĐẦU ĐỂ CÁC HÀM BÊN DƯỚI KHÔNG BỊ LỖI 404
