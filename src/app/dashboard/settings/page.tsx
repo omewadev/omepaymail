@@ -156,6 +156,9 @@ export default function SettingsPage() {
                     <Copy className="w-4 h-4" />
                   </Button>
                 </div>
+                <p className="text-xs text-amber-700 bg-amber-50 p-2 rounded-md border border-amber-200 mt-2 leading-relaxed">
+                  <b>⚠️ Quan trọng:</b> Hãy copy và cất giữ Secret Key này an toàn. Vì lý do bảo mật, mã này <b>CHỈ HIỂN THỊ 1 LẦN DUY NHẤT</b> và sẽ không thể xem lại.
+                </p>
               </div>
             </div>
 

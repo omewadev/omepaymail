@@ -229,9 +229,19 @@ export default function Home() {
           ) : (
             <>
               <Tabs value={authTab} onValueChange={(v) => setAuthTab(v as "login" | "register")} className="w-full mt-4">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="login">Đăng nhập</TabsTrigger>
-                  <TabsTrigger value="register">Đăng ký</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-2 bg-slate-100 p-1 rounded-lg h-auto">
+                  <TabsTrigger 
+                    value="login" 
+                    className="data-[state=active]:bg-[#293462] data-[state=active]:text-white data-[state=active]:font-bold font-medium text-slate-500 transition-all rounded-md py-2.5"
+                  >
+                    Đăng nhập
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="register" 
+                    className="data-[state=active]:bg-[#293462] data-[state=active]:text-white data-[state=active]:font-bold font-medium text-slate-500 transition-all rounded-md py-2.5"
+                  >
+                    Đăng ký
+                  </TabsTrigger>
                 </TabsList>
                 <TabsContent value="login" className="space-y-4 mt-4">
                   <form onSubmit={handleEmailAuth} className="space-y-4">

@@ -81,9 +81,16 @@ export default function WebhookHistoryPage() {
                           <CheckCircle2 className="w-3 h-3" /> Thành công ({log.statusCode})
                         </Badge>
                       ) : (
-                        <Badge variant="destructive" className="flex w-fit items-center gap-1 text-xs">
-                          <XCircle className="w-3 h-3" /> Lỗi ({log.statusCode})
-                        </Badge>
+                        <div className="flex flex-col gap-1">
+                          <Badge variant="destructive" className="flex w-fit items-center gap-1 text-xs">
+                            <XCircle className="w-3 h-3" /> Lỗi ({log.statusCode})
+                          </Badge>
+                          {log.responseBody && (
+                            <span className="text-[10px] text-red-500 max-w-[200px] truncate" title={log.responseBody}>
+                              {log.responseBody}
+                            </span>
+                          )}
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>
