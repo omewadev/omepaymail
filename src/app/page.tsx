@@ -62,6 +62,7 @@ export default function Home() {
         const userRole = result.user.email === 'omewadev@gmail.com' ? 'admin' : 'customer';
         await setDoc(userRef, {
           id: result.user.uid,
+          uidLower: result.user.uid.toLowerCase(),
           email: result.user.email,
           displayName: email.split('@')[0],
           planName: 'Free',
@@ -98,6 +99,7 @@ export default function Home() {
         userRole = result.user.email === 'omewadev@gmail.com' ? 'admin' : 'customer';
         await setDoc(userRef, {
           id: result.user.uid,
+          uidLower: result.user.uid.toLowerCase(),
           email: result.user.email,
           displayName: result.user.displayName || '',
           planName: 'Free',

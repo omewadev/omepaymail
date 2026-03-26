@@ -4,13 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Mail, ShieldCheck, Zap, Globe, Copy, Info, Send, Loader2, AlertTriangle, BookOpen } from "lucide-react";
-import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase"; // Thêm useDoc và useMemoFirebase
+import { useUser, useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase"; 
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { triggerInboundTest } from "@/app/actions/test-inbound";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { doc } from "firebase/firestore"; // Thêm doc
+import { doc } from "firebase/firestore"; 
 
 export default function IntegrationsPage() {
   const { user } = useUser();
@@ -18,8 +18,8 @@ export default function IntegrationsPage() {
   const { toast } = useToast();
   const[isTesting, setIsTesting] = useState(false);
   
-  // Tạo địa chỉ email ảo dựa trên UID của user (Đã cập nhật theo Cloudflare Routing)
-  const forwardEmail = user?.uid ? `inbound+${user.uid}@omewa.vn` : "Đang tải...";
+  // [FIX] Ép toàn bộ UID về chữ thường để đồng bộ với Gmail Forwarding
+  const forwardEmail = user?.uid ? `inbound+${user.uid.toLowerCase()}@omewa.vn` : "Đang tải...";
 
   // Lấy thông tin user profile để hiển thị OTP
   const userProfileRef = useMemoFirebase(() => {
@@ -29,6 +29,14 @@ export default function IntegrationsPage() {
   const { data: userProfile, isLoading: isLoadingUserProfile } = useDoc(userProfileRef);
   const latestOtp = userProfile?.latestGmailForwardingOtp;
   const otpUpdatedAt = userProfile?.otpUpdatedAt;
+
+  // [AUTO-PATCH] Tự động cập nhật uidLower cho các tài khoản cũ (như tài khoản của sếp đang test)
+  useEffect(() => {
+    if (userProfile && !userProfile.uidLower && user?.uid && firestore) {
+      const ref = doc(firestore, "users", user.uid);
+      updateDocumentNonBlocking(ref, { uidLower: user.uid.toLowerCase() });
+    }
+  }, [userProfile, user?.uid, firestore]);
 
   const copyToClipboard = (text: string) => {
     if (!text) return;

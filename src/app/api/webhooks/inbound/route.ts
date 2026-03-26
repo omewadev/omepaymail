@@ -226,17 +226,24 @@ export async function POST(req: NextRequest) {
     }
 
     // =====================================================================
-    // KIỂM TRA USER & HẠN MỨC TRƯỚC KHI GỌI AI (GIỮ NGUYÊN 100%)
+    // KIỂM TRA USER & HẠN MỨC TRƯỚC KHI GỌI AI (ĐÃ FIX CASE-INSENSITIVE)
     // =====================================================================
     if (!uid) {
       return NextResponse.json({ error: 'Invalid routing address' }, { status: 400 });
     }
     
-    const userRef = adminDb.collection('users').doc(uid);
-    const userDoc = await userRef.get();
+    const lowerUid = uid.toLowerCase();
+    let userRef = adminDb.collection('users').doc(uid); // Thử tìm chính xác trước
+    let userDoc = await userRef.get();
     
+    // [FIX] Nếu không tìm thấy bằng ID gốc (do Gmail viết thường), tìm bằng uidLower
     if (!userDoc.exists) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      const usersSnap = await adminDb.collection('users').where('uidLower', '==', lowerUid).limit(1).get();
+      if (usersSnap.empty) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      }
+      userDoc = usersSnap.docs[0] as any;
+      userRef = userDoc.ref;
     }
 
     const userData = userDoc.data();
