@@ -50,7 +50,21 @@ export async function POST(req: NextRequest) {
     //[FIX 2] Lấy UID chính xác từ header gốc của email (Hỗ trợ cả định dạng +caf_ của Gmail)
     const searchTo = parsedTo || to || text; 
     const uidMatch = searchTo.match(/inbound\+([^@>"\s=]+)[@=]/i);
-    const uid = uidMatch ? uidMatch[1].trim() : null;
+    let uid = uidMatch ? uidMatch[1].trim() : null;
+
+    // [FIX CRITICAL] TÌM UID GỐC NGAY TỪ ĐẦU ĐỂ CÁC HÀM BÊN DƯỚI KHÔNG BỊ LỖI 404
+    if (uid) {
+      const lowerUid = uid.toLowerCase();
+      const directSnap = await adminDb.collection('users').doc(uid).get();
+      if (!directSnap.exists) {
+        const querySnap = await adminDb.collection('users').where('uidLower', '==', lowerUid).limit(1).get();
+        if (!querySnap.empty) {
+          uid = querySnap.docs[0].id; // Gán lại UID chuẩn có hoa/thường
+        } else {
+          uid = null; // Báo null để chặn lại ở dưới
+        }
+      }
+    }
 
     // =====================================================================
     // LƯU BẢN SAO EMAIL VÀO HỘP THƯ TRUNG GIAN (VIRTUAL INBOX)
@@ -226,24 +240,17 @@ export async function POST(req: NextRequest) {
     }
 
     // =====================================================================
-    // KIỂM TRA USER & HẠN MỨC TRƯỚC KHI GỌI AI (ĐÃ FIX CASE-INSENSITIVE)
+    // KIỂM TRA USER & HẠN MỨC TRƯỚC KHI GỌI AI
     // =====================================================================
     if (!uid) {
-      return NextResponse.json({ error: 'Invalid routing address' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid routing address or User not found' }, { status: 400 });
     }
     
-    const lowerUid = uid.toLowerCase();
-    let userRef = adminDb.collection('users').doc(uid); // Thử tìm chính xác trước
-    let userDoc = await userRef.get();
+    const userRef = adminDb.collection('users').doc(uid);
+    const userDoc = await userRef.get();
     
-    // [FIX] Nếu không tìm thấy bằng ID gốc (do Gmail viết thường), tìm bằng uidLower
     if (!userDoc.exists) {
-      const usersSnap = await adminDb.collection('users').where('uidLower', '==', lowerUid).limit(1).get();
-      if (usersSnap.empty) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
-      }
-      userDoc = usersSnap.docs[0] as any;
-      userRef = userDoc.ref;
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     const userData = userDoc.data();

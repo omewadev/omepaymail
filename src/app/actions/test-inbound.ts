@@ -9,10 +9,19 @@ export async function triggerInboundTest(forwardEmail: string) {
   try {
     // 1. Lấy UID từ email ảo
     const uidMatch = forwardEmail.match(/inbound\+([^@]+)@/i);
-    const uid = uidMatch ? uidMatch[1] : null;
+    let uid = uidMatch ? uidMatch[1] : null;
 
     if (!uid) {
       throw new Error('Không tìm thấy UID hợp lệ trong email');
+    }
+
+    // [FIX CRITICAL] Tìm UID gốc (có phân biệt hoa thường) từ uidLower
+    const lowerUid = uid.toLowerCase();
+    const userSnap = await adminDb.collection('users').doc(uid).get();
+    if (!userSnap.exists) {
+      const querySnap = await adminDb.collection('users').where('uidLower', '==', lowerUid).limit(1).get();
+      if (querySnap.empty) throw new Error('Không tìm thấy User trong hệ thống');
+      uid = querySnap.docs[0].id; // Gán lại uid chuẩn để các hàm bên dưới không bị lỗi 404
     }
 
     // 2. Lấy cấu hình Prefix của User từ Database
